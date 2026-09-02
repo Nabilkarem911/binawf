@@ -68,6 +68,20 @@ model User {
   @@map("users")
 }
 
+model SlugHistory {
+  id          String   @id @default(cuid())
+  oldSlug     String
+  newSlug     String?
+  entityType  String   // "post" or "category"
+  entityId    String?
+  categoryId  String?
+  createdAt   DateTime @default(now())
+
+  @@index([oldSlug])
+  @@index([entityType, entityId])
+  @@map("slug_history")
+}
+
 model Category {
   id          String       @id @default(cuid())
   title       String
@@ -89,7 +103,10 @@ model Category {
 
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+  deletedAt   DateTime?
 
+  @@index([parentId, sortOrder])
+  @@index([isVisible, showInMenu])
   @@map("categories")
 }
 
@@ -122,6 +139,9 @@ model Post {
   // Type-specific fields in JSON
   metadata        Json?        // e.g. { year: 1445, term: 1, grade: 4, eventDate, videoUrl, externalUrl, studentName, studentClass }
 
+  // Soft delete
+  deletedAt       DateTime?
+
   // Relations
   media           PostMedia[]
   attachments     PostAttachment[]
@@ -133,6 +153,7 @@ model Post {
   @@index([status, publishedAt])
   @@index([categoryId, type, status, sortOrder])
   @@index([type, status, isFeatured, sortOrder])
+  @@index([deletedAt])
   @@map("posts")
 }
 
@@ -151,12 +172,14 @@ model Media {
   isExternal  Boolean      @default(false)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+  deletedAt   DateTime?
 
   posts       PostMedia[]
   attachments PostAttachment[]
   categories  Category[]     @relation(name: "CategoryImage")
   featuredFor Post[]         @relation(name: "PostFeaturedImage")
 
+  @@index([type, createdAt])
   @@map("media")
 }
 
@@ -201,6 +224,8 @@ model NavigationItem {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  @@index([location, isVisible, sortOrder])
+  @@index([parentId, sortOrder])
   @@map("navigation_items")
 }
 

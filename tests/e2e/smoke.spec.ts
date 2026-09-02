@@ -81,7 +81,7 @@ test.describe("Public site", () => {
 
     await page.goto("/art-education-news/new-website-launch");
     await expect(page.locator("h1")).toContainText("إطلاق الموقع الجديد");
-    await expect(page.locator("article")).toContainText("موهبة فنان");
+    await expect(page.locator("article").first()).toContainText("موهبة فنان");
 
     await takeScreenshot(page, "03-post");
     assertNoErrors(errors, "post page");
