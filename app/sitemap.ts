@@ -2,6 +2,10 @@ import { prisma } from "@/lib/prisma";
 import { PostStatus } from "@prisma/client";
 import type { MetadataRoute } from "next";
 
+// Sitemap must be generated at request time: it queries the DB, which is only
+// reachable at runtime (no DATABASE_URL during `next build`).
+export const dynamic = "force-dynamic";
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 

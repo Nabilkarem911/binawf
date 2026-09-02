@@ -36,7 +36,7 @@ RUN groupadd -r nextjs && useradd -r -g nextjs nextjs
 # Full copy: `next start` + the boot-time prisma CLI need the whole node_modules
 # (no standalone pruning traps).
 COPY --from=builder /app/ ./
-RUN chown -R nextjs:nodejs /app
+RUN chown -R nextjs:nextjs /app
 
 USER nextjs
 EXPOSE 3000
