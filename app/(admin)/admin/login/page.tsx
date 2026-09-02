@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export const dynamic = "force-dynamic";
@@ -48,7 +48,7 @@ export default function AdminLoginPage() {
     <div className="flex min-h-screen items-center justify-center px-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="text-center">تسجيل الدخول</CardTitle>
+          <h1 className="text-center text-xl font-bold">تسجيل الدخول</h1>
         </CardHeader>
         <CardContent>
           {error ? (

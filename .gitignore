@@ -12,6 +12,17 @@
 
 # testing
 /coverage
+/test-results
+/playwright-report
+
+# uploaded media
+/public/uploads
+
+# agent/tool config
+.agents
+.claude
+.cursor
+.devin
 
 # next.js
 /.next/

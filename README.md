@@ -33,10 +33,12 @@ npx prisma migrate dev
 npx prisma db seed
 ```
 
-4. تشغيل وضع التطوير:
+4. تشغيل وضع التطوير أو اختبارات المتصفح:
 
 ```bash
-npm run dev
+npm run dev        # خادم التطوير
+npm run start      # خادم الإنتاج (بعد npm run build)
+npm run test       # اختبارات Playwright (يتطلب خادماً يعمل على 3000)
 ```
 
 5. فتح `http://localhost:3000`.

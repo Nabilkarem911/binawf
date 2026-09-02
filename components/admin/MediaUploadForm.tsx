@@ -80,7 +80,13 @@ export function MediaUploadForm({ media }: { media: Media[] }) {
                 <TableCell>
                   {m.type === "IMAGE" ? (
                     <div className="relative h-12 w-12 overflow-hidden rounded">
-                      <Image src={m.url} alt={m.alt || m.originalName} fill className="object-cover" unoptimized />
+                      <Image
+                        src={m.url.startsWith("/uploads/") ? `/api/media?filename=${m.filename}` : m.url}
+                        alt={m.alt || m.originalName}
+                        fill
+                        className="object-cover"
+                        unoptimized
+                      />
                     </div>
                   ) : (
                     <span className="text-muted-foreground">—</span>

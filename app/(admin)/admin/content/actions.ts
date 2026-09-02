@@ -60,7 +60,7 @@ export async function createPost(prevState: PostFormState, formData: FormData): 
   });
 
   revalidatePath("/");
-  revalidatePath("/[...slug]");
+  revalidatePath("/[...slug]", "page");
   redirect("/admin/content");
 }
 
@@ -93,7 +93,7 @@ export async function updatePost(
   });
 
   revalidatePath("/");
-  revalidatePath("/[...slug]");
+  revalidatePath("/[...slug]", "page");
   redirect("/admin/content");
 }
 
@@ -101,5 +101,6 @@ export async function deletePost(id: string) {
   await requireAuth();
   await prisma.post.delete({ where: { id } });
   revalidatePath("/");
-  revalidatePath("/[...slug]");
+  revalidatePath("/[...slug]", "page");
+  redirect("/admin/content");
 }

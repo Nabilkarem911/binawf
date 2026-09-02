@@ -61,6 +61,6 @@ export async function updateSettings(
   ]);
 
   revalidatePath("/");
-  revalidatePath("/[...slug]");
+  revalidatePath("/[...slug]", "page");
   return { message: "تم حفظ الإعدادات بنجاح." };
 }
