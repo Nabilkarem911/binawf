@@ -277,28 +277,73 @@ async function seedCategories(adminId: string) {
 }
 
 async function seedNavigation() {
-  // Clear existing header nav and recreate
+  // Clear existing header nav and recreate with grouped structure
   await prisma.navigationItem.deleteMany({ where: { location: "HEADER" } });
 
-  const navItems = [
+  type NavChild = { title: string; url: string; sortOrder: number };
+  type NavGroup = { title: string; url: string; sortOrder: number; children?: NavChild[] };
+
+  const navItems: NavGroup[] = [
     { title: "الرئيسية", url: "/", sortOrder: 10 },
-    { title: "التربية الخاصة", url: "/special-education", sortOrder: 20 },
-    { title: "المشروعات الفنية", url: "/art-projects", sortOrder: 30 },
-    { title: "مجال الرسم", url: "/drawing-field", sortOrder: 40 },
-    { title: "مجال الخزف", url: "/ceramics", sortOrder: 50 },
-    { title: "مجال الزخرفة", url: "/decoration", sortOrder: 60 },
-    { title: "الشارة الذهبية", url: "/golden-badge", sortOrder: 70 },
-    { title: "الإعلانات", url: "/announcements", sortOrder: 80 },
-    { title: "أخبار التربية الفنية", url: "/art-education-news", sortOrder: 90 },
-    { title: "معارض التربية الفنية", url: "/art-exhibitions", sortOrder: 100 },
-    { title: "إبداعات الطلاب", url: "/student-creations", sortOrder: 110 },
-    { title: "دروس التربية الفنية", url: "/art-lessons", sortOrder: 120 },
-    { title: "جوائز وإنجازات", url: "/awards-achievements", sortOrder: 130 },
-    { title: "اليوم الوطني", url: "/national-day", sortOrder: 140 },
+    {
+      title: "المجالات الفنية",
+      url: "/drawing-field",
+      sortOrder: 20,
+      children: [
+        { title: "مجال الرسم", url: "/drawing-field", sortOrder: 10 },
+        { title: "مجال الخزف", url: "/ceramics", sortOrder: 20 },
+        { title: "مجال الزخرفة", url: "/decoration", sortOrder: 30 },
+        { title: "مجال المعادن", url: "/metals", sortOrder: 40 },
+        { title: "مجال الخشب", url: "/wood", sortOrder: 50 },
+        { title: "مجال النسيج", url: "/textile", sortOrder: 60 },
+      ],
+    },
+    {
+      title: "المحتوى",
+      url: "/art-education-news",
+      sortOrder: 30,
+      children: [
+        { title: "أخبار التربية الفنية", url: "/art-education-news", sortOrder: 10 },
+        { title: "الإعلانات", url: "/announcements", sortOrder: 20 },
+        { title: "دروس التربية الفنية", url: "/art-lessons", sortOrder: 30 },
+        { title: "بحوث ومشروعات وتقارير", url: "/research-reports", sortOrder: 40 },
+      ],
+    },
+    {
+      title: "المعارض",
+      url: "/art-exhibitions",
+      sortOrder: 40,
+      children: [
+        { title: "معارض التربية الفنية", url: "/art-exhibitions", sortOrder: 10 },
+        { title: "المعارض الافتراضية", url: "/virtual-exhibitions", sortOrder: 20 },
+        { title: "إبداعات الطلاب", url: "/student-creations", sortOrder: 30 },
+      ],
+    },
+    {
+      title: "الإنجازات",
+      url: "/golden-badge",
+      sortOrder: 50,
+      children: [
+        { title: "الشارة الذهبية", url: "/golden-badge", sortOrder: 10 },
+        { title: "جوائز وإنجازات", url: "/awards-achievements", sortOrder: 20 },
+        { title: "المشروعات الفنية", url: "/art-projects", sortOrder: 30 },
+      ],
+    },
+    { title: "التربية الخاصة", url: "/special-education", sortOrder: 60 },
+    { title: "اليوم الوطني", url: "/national-day", sortOrder: 70 },
   ];
 
   for (const item of navItems) {
-    await prisma.navigationItem.create({ data: { ...item, location: "HEADER" } });
+    const parent = await prisma.navigationItem.create({
+      data: { title: item.title, url: item.url, sortOrder: item.sortOrder, location: "HEADER" },
+    });
+    if (item.children) {
+      for (const child of item.children) {
+        await prisma.navigationItem.create({
+          data: { ...child, parentId: parent.id, location: "HEADER" },
+        });
+      }
+    }
   }
 }
 
@@ -307,13 +352,14 @@ async function seedHomepageSections() {
 
   await prisma.homepageSection.createMany({
     data: [
-      { title: "الشعار الترحيبي", type: "HERO", sortOrder: 10, isVisible: true, settings: { title: "موهبة فنان", subtitle: "التربية الفنية بمدرسة عبد الرحمن بن عوف الابتدائية بجدة", cta: "/national-day", ctaLabel: "استكشف المعارض" } },
-      { title: "أخبار التربية الفنية", type: "LATEST_NEWS", sortOrder: 20, isVisible: true, settings: { limit: 4, categorySlug: "art-education-news" } },
-      { title: "الإعلانات", type: "ANNOUNCEMENTS", sortOrder: 30, isVisible: true, settings: { limit: 4, categorySlug: "announcements" } },
-      { title: "معارض التربية الفنية", type: "GALLERIES", sortOrder: 40, isVisible: true, settings: { limit: 6, categorySlug: "art-exhibitions" } },
-      { title: "إبداعات الطلاب", type: "STUDENT_WORK", sortOrder: 50, isVisible: true, settings: { limit: 6, categorySlug: "student-creations" } },
-      { title: "جوائز وإنجازات", type: "ACHIEVEMENTS", sortOrder: 60, isVisible: true, settings: { limit: 4, categorySlug: "awards-achievements" } },
-      { title: "الأقسام الرئيسية", type: "FEATURED_CATEGORIES", sortOrder: 70, isVisible: true, settings: {} },
+      { title: "الشعار الترحيبي", type: "HERO", sortOrder: 10, isVisible: true, settings: { title: "موهبة فنان", subtitle: "التربية الفنية بمدرسة عبد الرحمن بن عوف الابتدائية بجدة — حيث يلتقي الإبداع بالتعلم", cta: "/art-exhibitions", ctaLabel: "استكشف المعارض", secondaryCta: "/art-education-news", secondaryCtaLabel: "آخر الأخبار" } },
+      { title: "الأقسام الرئيسية", type: "FEATURED_CATEGORIES", sortOrder: 20, isVisible: true, subtitle: "استكشف مجالات التربية الفنية المختلفة", settings: {} },
+      { title: "أخبار التربية الفنية", type: "LATEST_NEWS", sortOrder: 30, isVisible: true, subtitle: "آخر مستجدات وأنشطة التربية الفنية", settings: { limit: 5, categorySlug: "art-education-news" } },
+      { title: "الإعلانات", type: "ANNOUNCEMENTS", sortOrder: 40, isVisible: true, subtitle: "تنبيهات ومعلومات مهمة", settings: { limit: 4, categorySlug: "announcements" } },
+      { title: "معارض التربية الفنية", type: "GALLERIES", sortOrder: 50, isVisible: true, subtitle: "معارض أعمال الطلاب عبر السنوات", settings: { limit: 6, categorySlug: "art-exhibitions" } },
+      { title: "إبداعات الطلاب", type: "STUDENT_WORK", sortOrder: 60, isVisible: true, subtitle: "أعمال فنية مبدعة من طلاب المدرسة", settings: { limit: 6, categorySlug: "student-creations" } },
+      { title: "جوائز وإنجازات", type: "ACHIEVEMENTS", sortOrder: 70, isVisible: true, subtitle: "تكريمات وميداليات وشهادات تميز", settings: { limit: 4, categorySlug: "awards-achievements" } },
+      { title: "ابدأ الاستكشاف", type: "CUSTOM", sortOrder: 80, isVisible: true, subtitle: "تصفح جميع أقسام التربية الفنية واكتشف عالم الإبداع", settings: { cta: "/drawing-field", ctaLabel: "تصفح المجالات الفنية" } },
     ],
   });
 }

@@ -1,10 +1,11 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { updatePost } from "../actions";
+import { updatePost, deletePost } from "../actions";
 import { ContentForm } from "@/components/admin/ContentForm";
-import { Button } from "@/components/ui/button";
-import { deletePost } from "../actions";
+import { ArrowRight } from "lucide-react";
+import { DeleteConfirmButton } from "@/components/admin/DeleteConfirmButton";
 
 export const dynamic = "force-dynamic";
 
@@ -26,16 +27,24 @@ export default async function EditContentPage({ params }: { params: Promise<{ id
   if (!post) notFound();
 
   const updateBound = updatePost.bind(null, id);
+  const deleteBound = deletePost.bind(null, id);
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">تعديل محتوى</h1>
-        <form action={deletePost.bind(null, id)}>
-          <Button type="submit" variant="destructive" size="sm">
-            حذف
-          </Button>
-        </form>
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <Link href="/admin/content" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+            <ArrowRight className="h-4 w-4" />
+            العودة للمحتوى
+          </Link>
+          <h1 className="mt-2 text-2xl font-black tracking-tight text-foreground">تعديل: {post.title}</h1>
+        </div>
+        <DeleteConfirmButton
+          action={deleteBound}
+          label="حذف"
+          title="تأكيد حذف المحتوى"
+          message={`هل أنت متأكد من حذف "${post.title}"؟ لا يمكن التراجع عن هذا الإجراء.`}
+        />
       </div>
       <ContentForm
         categories={categories}

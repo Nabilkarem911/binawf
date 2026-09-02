@@ -13,7 +13,10 @@ export default async function MediaPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">الوسائط</h1>
+      <div>
+        <h1 className="text-2xl font-black tracking-tight text-foreground">مكتبة الوسائط</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{media.length} ملف — ارفع وأدر صور ومقاطع ومستندات الموقع</p>
+      </div>
       <MediaUploadForm media={media} />
     </div>
   );

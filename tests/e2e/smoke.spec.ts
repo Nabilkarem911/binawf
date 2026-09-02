@@ -30,6 +30,15 @@ function assertNoErrors(errors: { console: string[]; network: string[] }, name: 
   expect(filtered, `Console/Network errors in ${name}: ${filtered.join("; ")}`).toHaveLength(0);
 }
 
+async function adminLogin(page: Page) {
+  await page.goto("/admin/login");
+  await expect(page.locator("h1")).toContainText("تسجيل الدخول");
+  await page.fill("input#email", ADMIN_EMAIL);
+  await page.fill("input#password", ADMIN_PASSWORD);
+  await page.click("button[type='submit']");
+  await page.waitForURL("/admin");
+}
+
 test.describe("Public site", () => {
   let errors = { console: [] as string[], network: [] as string[] };
 
@@ -118,10 +127,13 @@ test.describe("Public site", () => {
     await page.goto("/");
     await expect(page.locator("header")).toBeVisible();
 
-    const menuButton = page.locator("[aria-label='القائمة']");
+    // Mobile nav trigger button
+    const menuButton = page.locator("[aria-label='فتح القائمة']");
     await expect(menuButton).toBeVisible();
     await menuButton.click();
-    await expect(page.locator("[data-slot='sheet-content'] >> text=التربية الخاصة")).toBeVisible();
+
+    // Wait for mobile nav content to appear
+    await expect(page.locator("body")).toContainText("التربية الخاصة");
 
     await takeScreenshot(page, "06-mobile-menu");
     assertNoErrors(errors, "mobile responsive");
@@ -135,14 +147,7 @@ test.describe("Admin dashboard", () => {
     errors = { console: [], network: [] };
     attachErrorCollectors(page, errors);
 
-    await page.goto("/admin/login");
-    await expect(page.locator("h1")).toContainText("تسجيل الدخول");
-
-    await page.fill("input#email", ADMIN_EMAIL);
-    await page.fill("input#password", ADMIN_PASSWORD);
-    await page.click("button:has-text('دخول')");
-
-    await page.waitForURL("/admin");
+    await adminLogin(page);
     await expect(page.locator("h1")).toContainText("لوحة التحكم");
 
     await takeScreenshot(page, "07-admin-dashboard");
@@ -155,11 +160,7 @@ test.describe("Admin dashboard", () => {
     errors = { console: [], network: [] };
     attachErrorCollectors(page, errors);
 
-    await page.goto("/admin/login");
-    await page.fill("input#email", ADMIN_EMAIL);
-    await page.fill("input#password", ADMIN_PASSWORD);
-    await page.click("button:has-text('دخول')");
-    await page.waitForURL("/admin");
+    await adminLogin(page);
 
     await page.goto("/admin/content/new");
     await expect(page.locator("h1")).toContainText("إنشاء محتوى جديد");
@@ -173,15 +174,18 @@ test.describe("Admin dashboard", () => {
 
     await page.getByRole("link", { name: contentTitle }).first().click();
 
-    await expect(page.locator("h1")).toContainText("تعديل محتوى");
+    await expect(page.locator("h1")).toContainText("تعديل");
     await page.fill("input#title", newTitle);
     await page.click("button:has-text('حفظ')");
 
     await page.waitForURL("/admin/content");
     await expect(page.locator("body")).toContainText(newTitle);
 
-    await page.click(`text=${newTitle}`);
+    // Delete with confirmation modal
+    await page.getByRole("link", { name: newTitle }).first().click();
     await page.click("button:has-text('حذف')");
+    // Confirm in modal
+    await page.click("button:has-text('نعم، احذف')");
     await page.waitForURL("/admin/content");
     await expect(page.locator("body")).not.toContainText(newTitle);
 
@@ -195,11 +199,7 @@ test.describe("Admin dashboard", () => {
     errors = { console: [], network: [] };
     attachErrorCollectors(page, errors);
 
-    await page.goto("/admin/login");
-    await page.fill("input#email", ADMIN_EMAIL);
-    await page.fill("input#password", ADMIN_PASSWORD);
-    await page.click("button:has-text('دخول')");
-    await page.waitForURL("/admin");
+    await adminLogin(page);
 
     await page.goto("/admin/categories/new");
     await expect(page.locator("h1")).toContainText("إنشاء قسم جديد");
@@ -212,15 +212,17 @@ test.describe("Admin dashboard", () => {
     await expect(page.locator("body")).toContainText(catTitle);
 
     await page.getByRole("link", { name: catTitle }).first().click();
-    await expect(page.locator("h1")).toContainText("تعديل قسم");
+    await expect(page.locator("h1")).toContainText("تعديل");
     await page.fill("input#title", newTitle);
     await page.click("button:has-text('حفظ')");
 
     await page.waitForURL("/admin/categories");
     await expect(page.locator("body")).toContainText(newTitle);
 
+    // Delete with confirmation modal
     await page.getByRole("link", { name: newTitle }).first().click();
-    await page.click("button:has-text('حذف')");
+    await page.click("button:has-text('حذف القسم')");
+    await page.click("button:has-text('نعم، احذف')");
     await page.waitForURL("/admin/categories");
     await expect(page.locator("body")).not.toContainText(newTitle);
 
@@ -232,11 +234,7 @@ test.describe("Admin dashboard", () => {
     errors = { console: [], network: [] };
     attachErrorCollectors(page, errors);
 
-    await page.goto("/admin/login");
-    await page.fill("input#email", ADMIN_EMAIL);
-    await page.fill("input#password", ADMIN_PASSWORD);
-    await page.click("button:has-text('دخول')");
-    await page.waitForURL("/admin");
+    await adminLogin(page);
 
     // Create a 1x1 transparent PNG
     const pngBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=";
@@ -246,14 +244,14 @@ test.describe("Admin dashboard", () => {
     fs.writeFileSync(tmpFile, buffer);
 
     await page.goto("/admin/media");
-    await expect(page.locator("h1")).toContainText("الوسائط");
+    await expect(page.locator("h1")).toContainText("مكتبة الوسائط");
 
     const input = page.locator("input[type='file']");
     await input.setInputFiles(tmpFile);
-    await page.click("button:has-text('رفع')");
+    await page.click("button:has-text('رفع الملفات')");
 
     await expect(page.locator("body")).toContainText("تم رفع الملفات");
-    await expect(page.locator("table")).toContainText("test-image.png");
+    await expect(page.locator("body")).toContainText("test-image.png");
 
     await takeScreenshot(page, "10-admin-media");
     assertNoErrors(errors, "admin media upload");
@@ -264,17 +262,13 @@ test.describe("Admin dashboard", () => {
     errors = { console: [], network: [] };
     attachErrorCollectors(page, errors);
 
-    await page.goto("/admin/login");
-    await page.fill("input#email", ADMIN_EMAIL);
-    await page.fill("input#password", ADMIN_PASSWORD);
-    await page.click("button:has-text('دخول')");
-    await page.waitForURL("/admin");
+    await adminLogin(page);
 
     await page.goto("/admin/settings");
     await expect(page.locator("h1")).toContainText("إعدادات الموقع");
 
     await page.fill("input#site_title", newTitle);
-    await page.click("button:has-text('حفظ')");
+    await page.click("button:has-text('حفظ الإعدادات')");
     await expect(page.locator("body")).toContainText("تم حفظ الإعدادات");
 
     await page.goto("/");

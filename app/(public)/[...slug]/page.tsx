@@ -67,6 +67,7 @@ export default async function DynamicPage({ params }: { params: Promise<PagePara
           author: { select: { name: true } },
           category: { select: { title: true, slug: true } },
           featuredImage: { select: { url: true, alt: true } },
+          media: { include: { media: { select: { url: true, alt: true, caption: true, width: true, height: true } } } },
         },
       });
       if (post && post.status === PostStatus.PUBLISHED) {

@@ -22,7 +22,7 @@ export default async function HomePage() {
   ]);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col">
       {sections.map((section) => (
         <HomepageSectionRenderer key={section.id} section={section} settings={settings} />
       ))}

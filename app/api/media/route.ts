@@ -135,3 +135,33 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ media });
 }
+
+export async function DELETE(request: Request) {
+  const session = await getAdminSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get("id");
+  if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+
+  const media = await prisma.media.findUnique({ where: { id } });
+  if (!media) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  // Delete file from disk if it's a local upload
+  if (media.url.includes("/api/media?filename=") || media.url.startsWith("/uploads/")) {
+    try {
+      const filePath = path.join(UPLOAD_DIR, media.filename);
+      const resolved = path.resolve(filePath);
+      const resolvedUploadDir = path.resolve(UPLOAD_DIR);
+      if (resolved.startsWith(resolvedUploadDir)) {
+        const { unlink } = await import("fs/promises");
+        await unlink(resolved);
+      }
+    } catch {
+      // File may already be gone — ignore
+    }
+  }
+
+  await prisma.media.delete({ where: { id } });
+  return NextResponse.json({ ok: true });
+}
