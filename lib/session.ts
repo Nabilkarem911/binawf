@@ -11,7 +11,7 @@ export interface AdminSession {
 const ONE_DAY = 60 * 60 * 24;
 
 export const sessionOptions: SessionOptions = {
-  password: process.env.SESSION_SECRET!,
+  password: process.env["SESSION_SECRET"]!,
   cookieName: "binawf-session",
   cookieOptions: {
     secure: process.env.NODE_ENV === "production",
