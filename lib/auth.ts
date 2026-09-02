@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { unsealData, sealData, getIronSession, webCookies } from "iron-session";
 import { AdminSession, sessionOptions } from "./session";
 import { prisma } from "./prisma";
+import { checkRateLimit } from "./rate-limit";
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 
@@ -59,6 +60,17 @@ export async function loginHandler(request: NextRequest) {
       return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
     }
 
+    // Brute-force protection: per-IP window (10 attempts / 15 min).
+    const forwarded = request.headers.get("x-forwarded-for");
+    const ip = forwarded ? forwarded.split(",")[0].trim() : "direct";
+    const rl = checkRateLimit(`login:${ip}`);
+    if (!rl.ok) {
+      return NextResponse.json(
+        { error: "محاولات كثيرة جداً — انتظر قليلاً ثم أعد المحاولة" },
+        { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } }
+      );
+    }
+
     const session = await verifyCredentials(email, password);
     if (!session) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
@@ -70,7 +82,9 @@ export async function loginHandler(request: NextRequest) {
     Object.assign(ironSession, session);
     await ironSession.save();
 
-    return NextResponse.json({ ok: true, user: { name: session.name, role: session.role } }, { headers });
+    const responseHeaders = new Headers(headers);
+    responseHeaders.set("Cache-Control", "no-store");
+    return NextResponse.json({ ok: true, user: { name: session.name, role: session.role } }, { headers: responseHeaders });
   } catch {
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }

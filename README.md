@@ -98,6 +98,53 @@ public/uploads/      # ملفات مرفوعة محلياً
 - لم يتم ترحيل جسم الصفحات والصور/الملفات/مقاطع الفيديو المدمجة تلقائياً لأن Google Sites لا يوفر واجهة برمجية عامة لاستخراجها.
 - المسؤول عن الموقع يمكنه إضافة المحتوى والوسائط عبر لوحة التحكم الجديدة.
 
+## النشر على أي سيرفر (إنتاج) — Docker Compose
+
+الملف `docker-compose.yml` بيشغّل الموقع + PostgreSQL معاً على أي سيرفر فيه Docker — من غير أي اعتماد على Dokploy أو Vercel.
+
+```bash
+cp .env.example .env        # ثم عدّل القيم الفاضية (انظر أدناه)
+openssl rand -hex 32        # → SESSION_SECRET
+openssl rand -base64 18     # → ADMIN_PASSWORD
+openssl rand -hex 16        # → POSTGRES_PASSWORD
+docker compose up -d --build
+```
+
+- الموقع على `http://SERVER_IP:3000` (غيّر `PORT` في `.env` لو حابب).
+- الرفعات بتتحفظ في volume باسم `uploads` والبيانات في `dbdata` — **بتفضل بعد أي redeploy/restart**.
+- أي سيرفر PaaS بيقرا compose (Dokploy/Coolify/CapRover) يشتغل معاه — الداتابيز جوه الشبكة الداخلية مش مكشوفة.
+
+### تركيب مباشر على Node (من غير Docker)
+
+```bash
+npm ci
+cp .env.example .env   # وضبط DATABASE_URL على postgres خارجي + SESSION_SECRET + ADMIN_*
+npx prisma migrate deploy
+npx prisma db seed     # أول مرة فقط
+npm run build
+npm run start          # على المنفذ 3000
+```
+
+## الأمان (إلزامي في الإنتاج)
+
+الـ entrypoint بيفشل التشغيل **عمداً** في وضع الإنتاج لو:
+- `SESSION_SECRET` ناقص أو أقل من 32 حرف.
+- `ADMIN_PASSWORD` ناقص، أو أقل من 12 حرف، أو مساوي للقيمة الافتراضية الموثقة `Binawf2026!` (على قاعدة فاضية).
+
+إجراءات أمان مدمجة:
+- تسجيل الدخول محمي بـ **rate limiting** (10 محاولات / 15 دقيقة لكل IP).
+- الرفع محصور بأنواع معينة فقط (PNG/JPG/GIF/WebP/MP4/PDF) مع فحص **magic bytes** وحد أقصى للحجم (25MB افتراضياً عبر `MAX_UPLOAD_MB`) — **ممنوع SVG/HTML/executables** (حماية من stored XSS).
+- ترويسات أمان (`nosniff`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, `COOP`).
+- التطبيق شغال كمستخدم غير root داخل الحاوية مع `no-new-privileges`.
+- كلمة مرور المدير مخزنة كـ bcrypt؛ غيّرها بعد أول دخول من الإعدادات.
+
+قبل ما تفتح الموقع للجمهور: غيّر `SESSION_SECRET` و `ADMIN_PASSWORD`، ولو حطيت الرفعات على volume اعمل **نسخة احتياطية دورية للـ DB** (`pg_dump` أو snapshot من منصة الاستضافة).
+
+### حدود معروفة
+- المحتوى بيُدخل كـ HTML خام من لوحة التحكم (مفيش WYSIWYG بعد) — **ممنح صلاحية التحرير لناس موثوقين فقط**.
+- الرفعات محلية على volume (مش S3/CDN) — مناسبة للاستخدام المدرسي؛ للتحميل العالي بدّلها بتخزين كائنات.
+- rate limiting في الذاكرة — لو شغّلت أكثر من نسخة (multi-instance) محتاج Redis.
+
 ## ملاحظات الإنتاج
 
 - غيّر `SESSION_SECRET` إلى سلسلة عشوائية طويلة.

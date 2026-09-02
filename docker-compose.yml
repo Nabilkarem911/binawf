@@ -1,0 +1,60 @@
+# Portable production stack — works on ANY docker host (VPS, Dokploy, Coolify,
+# CapRover, docker compose directly). No host ports exposed for the database.
+# Usage: cp .env.example .env  →  fill secrets  →  docker compose up -d --build
+name: binawf
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # NEXT_PUBLIC_* is baked at build time — must be the FINAL public URL.
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:?Set NEXT_PUBLIC_SITE_URL in your .env}
+    image: binawf:local
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-binawf}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in your .env}@db:5432/${POSTGRES_DB:-binawf}?schema=public
+      SESSION_SECRET: ${SESSION_SECRET:?Set SESSION_SECRET (32+ chars) in your .env}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@binawf.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD (12+ chars) in your .env}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+      NODE_ENV: production
+      MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-25}
+    ports:
+      - "${PORT:-3000}:3000"
+    volumes:
+      # uploaded media survives redeploys/restarts
+      - uploads:/app/public/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-binawf}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in your .env}
+      POSTGRES_DB: ${POSTGRES_DB:-binawf}
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-binawf} -d ${POSTGRES_DB:-binawf}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  dbdata:
+  uploads:

@@ -36,7 +36,9 @@ RUN groupadd -r nextjs && useradd -r -g nextjs nextjs
 # Full copy: `next start` + the boot-time prisma CLI need the whole node_modules
 # (no standalone pruning traps).
 COPY --from=builder /app/ ./
-RUN chown -R nextjs:nextjs /app
+# uploads dir must EXIST and be owned by the app user inside the image — a fresh
+# named volume mounted over it inherits that ownership (docker copy-up).
+RUN mkdir -p /app/public/uploads && chown -R nextjs:nextjs /app
 
 USER nextjs
 EXPOSE 3000
