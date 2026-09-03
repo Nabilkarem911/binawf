@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { PostType, type Category, type Media } from "@prisma/client";
 import type { CategoryFormState } from "@/app/(admin)/admin/categories/actions";
 import { MediaPicker } from "@/components/admin/MediaPicker";
+import { SearchableTreeCombobox } from "@/components/admin/SearchableTreeCombobox";
 import { Save } from "lucide-react";
 
 const typeOptions = [
@@ -117,25 +118,14 @@ export function CategoryForm({
 
         <div className="space-y-2">
           <Label>القسم الأب</Label>
-          <Select value={parentId} onValueChange={(v) => setParentId(v ?? "__none__")}>
-            <SelectTrigger>
-              <SelectValue>
-                {(v: string | null) => {
-                  if (!v || v === "__none__") return "بدون أب (قسم رئيسي)";
-                  const cat = availableParents.find((c) => c.id === v);
-                  return cat ? cat.title : "بدون أب (قسم رئيسي)";
-                }}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__none__">بدون أب (قسم رئيسي)</SelectItem>
-              {availableParents.map((cat) => (
-                <SelectItem key={cat.id} value={cat.id}>
-                  {cat.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SearchableTreeCombobox
+            nodes={availableParents.map((c) => ({ id: c.id, title: c.title, parentId: c.parentId }))}
+            selectedId={parentId === "__none__" ? null : parentId}
+            onSelect={(id) => setParentId(id || "__none__")}
+            placeholder="بدون أب (قسم رئيسي)"
+            searchPlaceholder="ابحث عن قسم..."
+            noneLabel="بدون أب (قسم رئيسي)"
+          />
         </div>
       </div>
 

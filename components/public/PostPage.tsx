@@ -12,7 +12,7 @@ import { sanitizeHtml } from "@/lib/sanitize";
 type PostWithRelations = Post & {
   author: { name: string } | null;
   category: { title: string; slug: string } | null;
-  featuredImage: { url: string; alt: string | null } | null;
+  featuredImage: { url: string; alt: string | null; width: number | null; height: number | null } | null;
   media: { id: string; media: { url: string; alt: string | null; caption: string | null; width: number | null; height: number | null } }[];
 };
 
@@ -101,17 +101,33 @@ export async function PostPage({ post }: { post: PostWithRelations }) {
         </div>
       </div>
 
-      {/* Featured Image */}
+      {/* Featured Image — responsive, no crop, preserves aspect ratio */}
       {post.featuredImage ? (
-        <div className="relative mx-auto mt-8 aspect-[21/9] w-full max-w-5xl overflow-hidden rounded-3xl">
-          <Image
-            src={post.featuredImage.url}
-            alt={post.featuredImage.alt ?? post.title}
-            fill
-            className="object-cover"
-            priority
-            sizes="(max-width: 1200px) 100vw, 75vw"
-          />
+        <div className="mx-auto mt-8 w-full max-w-5xl overflow-hidden rounded-3xl bg-secondary/30">
+          {post.featuredImage.width && post.featuredImage.height ? (
+            // Use intrinsic dimensions — no crop, no distortion
+            <Image
+              src={post.featuredImage.url}
+              alt={post.featuredImage.alt ?? post.title}
+              width={post.featuredImage.width}
+              height={post.featuredImage.height}
+              className="h-auto w-full object-contain"
+              priority
+              sizes="(max-width: 1200px) 100vw, 75vw"
+            />
+          ) : (
+            // Fallback for images without dimensions — use fill with contain
+            <div className="relative w-full" style={{ aspectRatio: "16 / 9" }}>
+              <Image
+                src={post.featuredImage.url}
+                alt={post.featuredImage.alt ?? post.title}
+                fill
+                className="object-contain"
+                priority
+                sizes="(max-width: 1200px) 100vw, 75vw"
+              />
+            </div>
+          )}
         </div>
       ) : null}
 

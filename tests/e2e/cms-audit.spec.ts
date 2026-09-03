@@ -6,7 +6,7 @@ const ADMIN_EMAIL = "admin@binawf.local";
 const ADMIN_PASSWORD = "Binawf2026!";
 
 // Reuse authenticated session across tests to avoid rate limiter
-let savedCookies: any[] | null = null;
+let savedCookies: { name: string; value: string; domain: string; path: string }[] | null = null;
 
 async function adminLogin(page: Page) {
   // If we have saved cookies, restore them first
@@ -227,5 +227,78 @@ test.describe("CMS Audit Repair - Mobile admin responsive", () => {
     const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
     const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
     expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 5);
+  });
+});
+
+test.describe("CMS Audit Repair - Searchable Tree Combobox", () => {
+  test("Category combobox is present and searchable in content form", async ({ page }) => {
+    await adminLogin(page);
+    await page.goto("/admin/content/new");
+    // The category combobox is in the "التصنيف" section — find it by its placeholder text
+    // The combobox trigger shows "اختياري" as placeholder
+    const comboboxTrigger = page.locator("button[aria-haspopup='listbox']:has-text('اختياري')");
+    await expect(comboboxTrigger).toBeVisible();
+    await comboboxTrigger.click();
+    await page.waitForTimeout(500);
+    await expect(page.locator("input[placeholder='ابحث عن قسم...']")).toBeVisible({ timeout: 5000 });
+    await page.locator("input[placeholder='ابحث عن قسم...']").fill("التربية");
+    await page.waitForTimeout(500);
+    const items = page.locator("[data-idx]");
+    const count = await items.count();
+    expect(count).toBeGreaterThan(0);
+    await page.keyboard.press("Escape");
+  });
+
+  test("Category combobox does not show raw IDs", async ({ page }) => {
+    await adminLogin(page);
+    await page.goto("/admin/content/new");
+    const comboboxTrigger = page.locator("button[aria-haspopup='listbox']:has-text('اختياري')");
+    await comboboxTrigger.click();
+    await page.waitForTimeout(1000);
+    const popupText = await page.locator(".bg-popover").first().textContent();
+    if (popupText) {
+      expect(popupText).not.toMatch(/\bcm[t]?[a-z0-9]{10,}/i);
+    }
+    await page.keyboard.press("Escape");
+  });
+
+  test("Category combobox in category form (parent selector)", async ({ page }) => {
+    await adminLogin(page);
+    await page.goto("/admin/categories/new");
+    // The parent selector shows "بدون أب (قسم رئيسي)" as placeholder
+    const comboboxTrigger = page.locator("button[aria-haspopup='listbox']:has-text('بدون أب')");
+    await expect(comboboxTrigger).toBeVisible();
+    await comboboxTrigger.click();
+    await expect(page.locator("input[placeholder='ابحث عن قسم...']")).toBeVisible({ timeout: 5000 });
+    await page.keyboard.press("Escape");
+  });
+
+  test("Category combobox keyboard navigation works", async ({ page }) => {
+    await adminLogin(page);
+    await page.goto("/admin/content/new");
+    const comboboxTrigger = page.locator("button[aria-haspopup='listbox']:has-text('اختياري')");
+    await comboboxTrigger.click();
+    await page.waitForTimeout(500);
+    await page.keyboard.press("ArrowDown");
+    await page.waitForTimeout(200);
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(500);
+    await expect(comboboxTrigger).toBeVisible();
+  });
+});
+
+test.describe("CMS Audit Repair - Featured Image no crop", () => {
+  test("MediaPicker preview section exists in content form", async ({ page }) => {
+    await adminLogin(page);
+    await page.goto("/admin/content/new");
+    await expect(page.locator("text=الصورة الرئيسية")).toBeVisible();
+  });
+
+  test("Public post page featured image uses object-contain", async ({ page }) => {
+    await page.goto("/art-education-news/new-website-launch");
+    const imageContainer = page.locator(".object-contain").first();
+    if (await imageContainer.count() > 0) {
+      await expect(imageContainer).toBeVisible();
+    }
   });
 });

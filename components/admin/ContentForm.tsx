@@ -14,6 +14,7 @@ import type { PostFormState } from "@/app/(admin)/admin/content/actions";
 import { Save, Search, Star } from "lucide-react";
 import { MediaPicker } from "@/components/admin/MediaPicker";
 import { RichTextEditor } from "@/components/admin/RichTextEditor";
+import { SearchableTreeCombobox } from "@/components/admin/SearchableTreeCombobox";
 
 const statusOptions = [
   { value: PostStatus.DRAFT, label: "مسودة", color: "bg-amber-100 text-amber-700" },
@@ -204,25 +205,14 @@ export function ContentForm({
               </div>
               <div className="space-y-2">
                 <Label className="text-xs font-semibold text-muted-foreground">القسم</Label>
-                <Select value={categoryId} onValueChange={(v) => setCategoryId(v ?? "__none__")}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue>
-                      {(v: string | null) => {
-                        if (!v || v === "__none__") return "اختياري";
-                        const cat = categories.find((c) => c.id === v);
-                        return cat ? cat.title : "اختياري";
-                      }}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">بدون قسم</SelectItem>
-                    {categories.map((cat) => (
-                      <SelectItem key={cat.id} value={cat.id}>
-                        {cat.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableTreeCombobox
+                  nodes={categories.map((c) => ({ id: c.id, title: c.title, parentId: c.parentId }))}
+                  selectedId={categoryId === "__none__" ? null : categoryId}
+                  onSelect={(id) => setCategoryId(id || "__none__")}
+                  placeholder="اختياري"
+                  searchPlaceholder="ابحث عن قسم..."
+                  noneLabel="بدون قسم"
+                />
               </div>
             </div>
           </div>

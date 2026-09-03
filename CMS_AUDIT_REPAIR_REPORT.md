@@ -253,9 +253,100 @@
 ## ما لم يُنفّذ بعد (مقترحات مستقبلية)
 
 - الترتيب بالسحب والإفلات (drag-and-drop reorder) للأقسام والقوائم — البنية التحتية موجودة في الإجراءات الخادمة، لكن التوصيل التفاعلي للواجهة يحتاج مكتبة DnD مخصصة.
-- منتقي أب شجري (Tree Combobox) للأقسام — الحالي يستخدم Select مسطح مع منع الدورات خادميًا.
 - مزود تخزين سحابي فعلي (S3/Supabase/Cloudinary) — التجريد موجود، التطبيق يحتاج تكوينًا.
 - اختبارات E2E للجوال (Pixel 7) — متاحة في التكوين لكن لم تُضف اختبارات CMS مخصصة لها بعد.
+
+---
+
+## المرحلة الثانية — إصلاح أخطاء UI النهائية
+
+### 20. إصلاح تموضع Category Select + Searchable Tree Combobox
+
+**المشكلة:** عند فتح Category Select في `/admin/content/[id]`، القائمة المنسدلة:
+- تظهر في مكان غير متوقع
+- غير مرتبطة بصريًا بالحقل
+- قد تنفتح للأعلى بشكل سيئ
+- لا تستخدم المساحة المتاحة
+- العناصر الطويلة لا تظهر بالكامل
+- RTL positioning غير مضبوط
+- يحدث clipping أو overflow
+
+**السبب الجذري:** 
+1. `@base-ui/react/select` `Positioner` مع `alignItemWithTrigger={true}` يحاول محاذاة العنصر المحدد مع الـ trigger، مما يسبب قفزات في التموضع.
+2. استخدام plain Select لقائمة قد تحتوي 100+ قسم غير عملي.
+3. لا يوجد بحث داخل القائمة.
+
+**الإصلاح:**
+1. إنشاء `components/admin/SearchableTreeCombobox.tsx` — مكوّن مستقل:
+   - تموضع عبر `getBoundingClientRect` + flip logic (collision-aware)
+   - `min-width` = عرض الـ trigger
+   - `max-width` = آمن للإطار
+   - `max-height` = `min(420px, available viewport)`
+   - بحث داخل الـ popup
+   - عرض هرمي مع مسافات بادئة
+   - تنقل بلوحة المفاتيح (ArrowUp/Down, Enter, Escape)
+   - RTL كامل باستخدام logical properties
+   - عرض الأسماء العربية فقط — لا تظهر IDs إطلاقًا
+   - زر مسح الاختيار
+2. تحديث `components/ui/select.tsx`:
+   - `alignItemWithTrigger` الافتراضي أصبح `false` (بدل `true`)
+   - `max-h` زاد من 320px إلى 420px
+3. استبدال Category Select في `ContentForm.tsx` بـ `SearchableTreeCombobox`
+4. استبدال Parent Select في `CategoryForm.tsx` بـ `SearchableTreeCombobox`
+
+**الملفات:**
+- `components/admin/SearchableTreeCombobox.tsx` (جديد)
+- `components/ui/select.tsx` (محدّث)
+- `components/admin/ContentForm.tsx` (محدّث)
+- `components/admin/CategoryForm.tsx` (محدّث)
+
+**الاختبارات:**
+- combobox موجود وقابل للبحث
+- لا تظهر IDs خام
+- combobox في نموذج القسم (منتقي الأب)
+- تنقل بلوحة المفاتيح يعمل
+
+### 21. إصلاح قص الصور (Image Cropping)
+
+**المشكلة:** الصورة المختارة تظهر مقصوصة في:
+- Admin Preview (MediaPicker)
+- Public Content Page (PostPage)
+القص ينتقل من المعاينة إلى الصفحة العامة.
+
+**السبب الجذري:**
+1. `MediaPicker.tsx`: `aspect-video` + `object-cover` = قص الصورة
+2. `PostPage.tsx`: `aspect-[21/9]` + `object-cover` = قص الصورة الرئيسية
+3. نموذج Media يحتوي على `width` و `height` لكنهما لا يُستخدمان
+
+**الإصلاح:**
+1. `MediaPicker.tsx` preview:
+   - إذا كان `width` و `height` متوفرين: استخدم `Image width/height` مع `object-contain` — لا قص، لا تشوه
+   - وإلا: `fill` + `object-contain` كحل بديل
+   - أزيل `aspect-video` الثابت
+2. `PostPage.tsx` featured image:
+   - إذا كان `width` و `height` متوفرين: استخدم `Image width/height` مع `object-contain`
+   - وإلا: `fill` + `object-contain` مع `aspect-ratio: 16/9` كحل بديل
+   - أزيل `aspect-[21/9]` + `object-cover`
+3. تحديث استعلام `PostPage` في `[...slug]/page.tsx` لتضمين `width` و `height` في `featuredImage` select
+4. الـ thumbnails في البطاقات (related posts, category cards, gallery grid) تبقى `object-cover` — هذا قص مقصود للتصميم
+
+**الملفات:**
+- `components/admin/MediaPicker.tsx` (محدّث)
+- `components/public/PostPage.tsx` (محدّث)
+- `app/(public)/[...slug]/page.tsx` (محدّث — إضافة width/height للاستعلام)
+
+**الاختبارات:**
+- قسم الصورة الرئيسية موجود في نموذج المحتوى
+- الصفحة العامة تستخدم `object-contain`
+
+### نتائج QA النهائية (المرحلة الثانية)
+
+| الخطوة | النتيجة |
+|---|---|
+| `npm run typecheck` | ✅ نجح (exit 0) |
+| `npm run lint` | ✅ نجح (exit 0) |
+| `npm run build` | ✅ نجح (exit 0) |
+| `npx playwright test --project=chromium` | ✅ 34/34 نجح |
 
 ---
 

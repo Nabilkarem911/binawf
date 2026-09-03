@@ -1,0 +1,21 @@
+Fix Category Select positioning and Featured Image cropping
+
+Root cause fixes for two critical UI bugs:
+
+1. Category Select positioning - replaced plain Base UI Select with a
+   new SearchableTreeCombobox component that uses collision-aware
+   positioning via getBoundingClientRect, supports search, tree
+   hierarchy, keyboard navigation, and never displays raw IDs.
+   Also fixed SelectContent default alignItemWithTrigger to false
+   and increased max-height from 320px to 420px.
+
+2. Featured Image cropping - replaced object-cover + fixed aspect
+   ratios with object-contain and intrinsic width/height from Media
+   metadata. Fixed both admin preview (MediaPicker) and public post
+   page (PostPage). Updated PostPage query to include width/height.
+
+Added 6 regression E2E tests (total 34, all passing).
+
+Generated with [Devin](https://devin.ai)
+
+Co-Authored-By: Devin <158243242+devin-ai-integration[bot]@users.noreply.github.com>

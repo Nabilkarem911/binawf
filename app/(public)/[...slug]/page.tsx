@@ -111,7 +111,7 @@ export default async function DynamicPage({ params }: { params: Promise<PagePara
         include: {
           author: { select: { name: true } },
           category: { select: { title: true, slug: true } },
-          featuredImage: { select: { url: true, alt: true } },
+          featuredImage: { select: { url: true, alt: true, width: true, height: true } },
           media: { include: { media: { select: { url: true, alt: true, caption: true, width: true, height: true } } } },
         },
       });

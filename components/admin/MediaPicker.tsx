@@ -103,18 +103,34 @@ export function MediaPicker({
       {/* Preview or placeholder */}
       {selected ? (
         <div className="space-y-3">
-          <div className="relative aspect-video overflow-hidden rounded-xl border border-border/60 bg-secondary">
+          <div className="relative w-full overflow-hidden rounded-xl border border-border/60 bg-secondary" style={{ minHeight: "120px" }}>
             {selected.type === "IMAGE" ? (
-              <Image
-                src={getMediaUrl(selected)}
-                alt={selected.alt || selected.originalName}
-                fill
-                className="object-cover"
-                unoptimized
-                sizes="400px"
-              />
+              selected.width && selected.height ? (
+                // Use intrinsic dimensions — no crop, no distortion
+                <Image
+                  src={getMediaUrl(selected)}
+                  alt={selected.alt || selected.originalName}
+                  width={selected.width}
+                  height={selected.height}
+                  className="h-auto w-full object-contain"
+                  unoptimized
+                  sizes="400px"
+                />
+              ) : (
+                // Fallback: fill container with contain
+                <div className="relative w-full" style={{ aspectRatio: "16 / 9" }}>
+                  <Image
+                    src={getMediaUrl(selected)}
+                    alt={selected.alt || selected.originalName}
+                    fill
+                    className="object-contain"
+                    unoptimized
+                    sizes="400px"
+                  />
+                </div>
+              )
             ) : (
-              <div className="flex h-full w-full items-center justify-center">
+              <div className="flex h-32 w-full items-center justify-center">
                 {selected.type === "VIDEO_LINK" ? (
                   <Film className="h-10 w-10 text-muted-foreground/40" />
                 ) : (
