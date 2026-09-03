@@ -10,10 +10,16 @@ export const dynamic = "force-dynamic";
 
 export default async function NewCategoryPage() {
   await requireAuth();
-  const categories = await prisma.category.findMany({
-    where: { isVisible: true },
-    orderBy: { sortOrder: "asc" },
-  });
+  const [categories, media] = await Promise.all([
+    prisma.category.findMany({
+      where: { isVisible: true },
+      orderBy: { sortOrder: "asc" },
+    }),
+    prisma.media.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 200,
+    }),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -27,6 +33,7 @@ export default async function NewCategoryPage() {
       </div>
       <CategoryForm
         categories={categories}
+        media={media}
         action={createCategory}
         category={{
           title: "",
@@ -37,6 +44,7 @@ export default async function NewCategoryPage() {
           sortOrder: 0,
           isVisible: true,
           showInMenu: true,
+          imageId: null,
         }}
       />
     </div>

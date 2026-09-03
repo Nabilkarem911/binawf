@@ -1,53 +1,136 @@
 "use client";
 
-import { useState, FormEvent, useRef } from "react";
+import { useState, FormEvent, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Upload, Search, Trash2, Copy, Check, Image as ImageIcon, FileText, Film } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Upload, Search, Trash2, Copy, Check, Image as ImageIcon, FileText, Film, X, Pencil } from "lucide-react";
 import type { Media } from "@prisma/client";
+
+type UploadStatus = "pending" | "uploading" | "success" | "error";
+
+type UploadItem = {
+  file: File;
+  status: UploadStatus;
+  error?: string;
+  progress?: number;
+};
+
+function getMediaUrl(m: Media): string {
+  return m.url.startsWith("/uploads/") ? `/api/media?filename=${m.filename}` : m.url;
+}
 
 export function MediaUploadForm({ media }: { media: Media[] }) {
   const router = useRouter();
-  const [files, setFiles] = useState<FileList | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [message, setMessage] = useState("");
+  const [uploadItems, setUploadItems] = useState<UploadItem[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<string>("ALL");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const formRef = useRef<HTMLFormElement>(null);
+  const [editMedia, setEditMedia] = useState<Media | null>(null);
+  const [editAlt, setEditAlt] = useState("");
+  const [editCaption, setEditCaption] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFiles = useCallback((files: FileList) => {
+    const items: UploadItem[] = Array.from(files).map((file) => ({
+      file,
+      status: "pending" as UploadStatus,
+    }));
+    setUploadItems((prev) => [...prev, ...items]);
+
+    // Upload each file sequentially
+    (async () => {
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        setUploadItems((prev) =>
+          prev.map((p, idx) =>
+            idx === uploadItemsIndex(prev, item.file.name, i)
+              ? { ...p, status: "uploading" as UploadStatus }
+              : p
+          )
+        );
+        try {
+          const formData = new FormData();
+          formData.append("file", item.file);
+          const res = await fetch("/api/media", { method: "POST", body: formData });
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data.error || "فشل الرفع");
+          }
+          setUploadItems((prev) =>
+            prev.map((p) =>
+              p.file === item.file ? { ...p, status: "success" as UploadStatus } : p
+            )
+          );
+        } catch (err) {
+          setUploadItems((prev) =>
+            prev.map((p) =>
+              p.file === item.file
+                ? { ...p, status: "error" as UploadStatus, error: err instanceof Error ? err.message : "خطأ" }
+                : p
+            )
+          );
+        }
+      }
+      // Refresh after all uploads
+      router.refresh();
+      // Clear completed items after a delay
+      setTimeout(() => {
+        setUploadItems((prev) => prev.filter((p) => p.status === "error" || p.status === "pending"));
+      }, 2000);
+    })();
+  }, [router]);
+
+  function uploadItemsIndex(arr: UploadItem[], name: string, fallback: number): number {
+    const idx = arr.findIndex((p) => p.file.name === name);
+    return idx >= 0 ? idx : fallback;
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!files || files.length === 0) return;
-
-    setUploading(true);
-    setMessage("");
-
-    try {
-      for (const file of Array.from(files)) {
-        const formData = new FormData();
-        formData.append("file", file);
-        const res = await fetch("/api/media", { method: "POST", body: formData });
-        if (!res.ok) {
-          setMessage("فشل رفع بعض الملفات.");
-        }
-      }
-      setMessage("تم رفع الملفات بنجاح.");
-      formRef.current?.reset();
-      setFiles(null);
-      router.refresh();
-    } catch {
-      setMessage("حدث خطأ أثناء الرفع.");
-    } finally {
-      setUploading(false);
+    const input = fileInputRef.current;
+    if (input && input.files && input.files.length > 0) {
+      handleFiles(input.files);
+      input.value = "";
     }
   }
 
+  function onDrop(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFiles(e.dataTransfer.files);
+    }
+  }
+
+  function onDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  }
+
+  function onDragLeave(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  }
+
   async function copyUrl(m: Media) {
-    const url = m.url.startsWith("/uploads/") ? `/api/media?filename=${m.filename}` : m.url;
+    const url = getMediaUrl(m);
     try {
       await navigator.clipboard.writeText(window.location.origin + url);
       setCopiedId(m.id);
@@ -73,8 +156,30 @@ export function MediaUploadForm({ media }: { media: Media[] }) {
     }
   }
 
-  function getMediaUrl(m: Media) {
-    return m.url.startsWith("/uploads/") ? `/api/media?filename=${m.filename}` : m.url;
+  function openEdit(m: Media) {
+    setEditMedia(m);
+    setEditAlt(m.alt || "");
+    setEditCaption(m.caption || "");
+  }
+
+  async function saveEdit() {
+    if (!editMedia) return;
+    setSavingEdit(true);
+    try {
+      const res = await fetch(`/api/media?id=${editMedia.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ alt: editAlt, caption: editCaption }),
+      });
+      if (res.ok) {
+        router.refresh();
+        setEditMedia(null);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setSavingEdit(false);
+    }
   }
 
   const filtered = media.filter((m) => {
@@ -94,39 +199,82 @@ export function MediaUploadForm({ media }: { media: Media[] }) {
     <div className="space-y-6">
       {/* Upload area */}
       <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-card">
-        <form ref={formRef} onSubmit={onSubmit}>
-          <label
-            htmlFor="files"
-            className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-secondary/30 px-6 py-10 text-center transition-colors hover:border-accent hover:bg-secondary/50 cursor-pointer"
+        <form onSubmit={onSubmit}>
+          <div
+            onDrop={onDrop}
+            onDragOver={onDragOver}
+            onDragLeave={onDragLeave}
+            className={`flex flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-10 text-center transition-colors cursor-pointer ${
+              isDragging
+                ? "border-accent bg-accent/10"
+                : "border-border bg-secondary/30 hover:border-accent hover:bg-secondary/50"
+            }`}
+            onClick={() => fileInputRef.current?.click()}
           >
             <Upload className="mb-3 h-10 w-10 text-muted-foreground/50" />
             <p className="font-semibold text-foreground">اسحب الملفات هنا أو انقر للاختيار</p>
-            <p className="mt-1 text-xs text-muted-foreground">صور، فيديوهات، مستندات — حتى 10MB لكل ملف</p>
+            <p className="mt-1 text-xs text-muted-foreground">صور، فيديوهات، مستندات — حتى 25MB لكل ملف</p>
             <input
+              ref={fileInputRef}
               id="files"
               type="file"
               multiple
               accept="image/*,video/*,.pdf,.doc,.docx"
               className="sr-only"
-              onChange={(e) => setFiles(e.target.files)}
+              onChange={(e) => {
+                if (e.target.files && e.target.files.length > 0) {
+                  handleFiles(e.target.files);
+                  e.target.value = "";
+                }
+              }}
             />
-          </label>
-          {files && files.length > 0 && (
-            <div className="mt-4 flex flex-wrap gap-2">
-              {Array.from(files).map((f, i) => (
-                <span key={i} className="rounded-lg bg-secondary px-3 py-1.5 text-xs font-medium text-foreground">
-                  {f.name}
-                </span>
-              ))}
-            </div>
-          )}
-          <div className="mt-4 flex items-center gap-3">
-            <Button type="submit" disabled={uploading || !files} className="h-10">
-              {uploading ? "جاري الرفع..." : "رفع الملفات"}
-            </Button>
-            {message ? <p className="text-sm text-muted-foreground">{message}</p> : null}
           </div>
         </form>
+
+        {/* Upload progress items */}
+        {uploadItems.length > 0 && (
+          <div className="mt-4 space-y-2">
+            {uploadItems.map((item, i) => (
+              <div
+                key={`${item.file.name}-${i}`}
+                className="flex items-center gap-3 rounded-lg border border-border/60 bg-secondary/20 p-3"
+              >
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-secondary">
+                  {item.file.type.startsWith("image/") ? (
+                    <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                  ) : item.file.type.startsWith("video/") ? (
+                    <Film className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-xs font-medium text-foreground">{item.file.name}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {(item.file.size / 1024).toFixed(0)} KB
+                  </p>
+                </div>
+                <div className="shrink-0">
+                  {item.status === "pending" && (
+                    <span className="text-xs text-muted-foreground">في الانتظار</span>
+                  )}
+                  {item.status === "uploading" && (
+                    <span className="text-xs text-accent">جاري الرفع...</span>
+                  )}
+                  {item.status === "success" && (
+                    <Check className="h-4 w-4 text-green-600" />
+                  )}
+                  {item.status === "error" && (
+                    <div className="flex items-center gap-1">
+                      <X className="h-4 w-4 text-red-600" />
+                      <span className="text-xs text-red-600">{item.error}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Stats */}
@@ -225,22 +373,34 @@ export function MediaUploadForm({ media }: { media: Media[] }) {
                 <p className="truncate text-xs font-medium text-foreground" title={m.originalName}>
                   {m.originalName}
                 </p>
-                <p className="text-[10px] text-muted-foreground">{m.mimeType}</p>
+                <p className="text-[10px] text-muted-foreground">
+                  {m.mimeType} • {(m.size / 1024).toFixed(0)} KB
+                </p>
               </div>
 
               {/* Actions overlay */}
               <div className="absolute inset-x-0 top-0 flex justify-between p-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); copyUrl(m); }}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-white/90 text-foreground shadow-sm transition-colors hover:bg-white"
+                    title="نسخ الرابط"
+                  >
+                    {copiedId === m.id ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); openEdit(m); }}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-white/90 text-foreground shadow-sm transition-colors hover:bg-white"
+                    title="تحرير"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                </div>
                 <button
                   type="button"
-                  onClick={() => copyUrl(m)}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-white/90 text-foreground shadow-sm transition-colors hover:bg-white"
-                  title="نسخ الرابط"
-                >
-                  {copiedId === m.id ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDeleteId(m.id)}
+                  onClick={(e) => { e.stopPropagation(); setDeleteId(m.id); }}
                   className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-white/90 text-red-600 shadow-sm transition-colors hover:bg-white"
                   title="حذف"
                 >
@@ -263,7 +423,7 @@ export function MediaUploadForm({ media }: { media: Media[] }) {
               <h3 className="text-lg font-bold text-foreground">تأكيد الحذف</h3>
             </div>
             <p className="text-sm text-muted-foreground">
-              هل أنت متأكد من حذف هذه الوسائط؟ لا يمكن التراجع عن هذا الإجراء.
+              هل أنت متأكد من حذف هذه الوسائط؟ سيتم إزالة الملف نهائياً.
             </p>
             <div className="mt-6 flex gap-2">
               <button
@@ -284,6 +444,64 @@ export function MediaUploadForm({ media }: { media: Media[] }) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Edit dialog */}
+      {editMedia && (
+        <Dialog open={true} onOpenChange={(o) => !o && setEditMedia(null)}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>تحرير الوسائط</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {editMedia.type === "IMAGE" && (
+                <div className="relative aspect-video overflow-hidden rounded-lg border border-border">
+                  <Image
+                    src={getMediaUrl(editMedia)}
+                    alt={editAlt || editMedia.originalName}
+                    fill
+                    className="object-contain"
+                    unoptimized
+                    sizes="400px"
+                  />
+                </div>
+              )}
+              <div>
+                <p className="text-xs text-muted-foreground">{editMedia.originalName}</p>
+                <p className="text-xs text-muted-foreground">
+                  {editMedia.mimeType} • {(editMedia.size / 1024).toFixed(0)} KB
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-alt">النص البديل (Alt Text)</Label>
+                <Input
+                  id="edit-alt"
+                  value={editAlt}
+                  onChange={(e) => setEditAlt(e.target.value)}
+                  placeholder="وصف الصورة"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-caption">التعليق (Caption)</Label>
+                <Textarea
+                  id="edit-caption"
+                  value={editCaption}
+                  onChange={(e) => setEditCaption(e.target.value)}
+                  rows={2}
+                  placeholder="تعليق اختياري"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button type="button" onClick={saveEdit} disabled={savingEdit} className="flex-1">
+                  {savingEdit ? "جاري الحفظ..." : "حفظ"}
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setEditMedia(null)}>
+                  إلغاء
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

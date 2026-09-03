@@ -9,8 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { PostType, type Category } from "@prisma/client";
+import { PostType, type Category, type Media } from "@prisma/client";
 import type { CategoryFormState } from "@/app/(admin)/admin/categories/actions";
+import { MediaPicker } from "@/components/admin/MediaPicker";
+import { Save } from "lucide-react";
 
 const typeOptions = [
   { value: PostType.PAGE, label: "صفحة" },
@@ -27,9 +29,14 @@ const typeOptions = [
   { value: PostType.VIRTUAL_EXHIBITION, label: "معرض افتراضي" },
 ];
 
+const typeLabelMap: Record<string, string> = Object.fromEntries(
+  typeOptions.map((t) => [t.value, t.label])
+);
+
 export function CategoryForm({
   category,
   categories,
+  media,
   action,
 }: {
   category: {
@@ -42,8 +49,10 @@ export function CategoryForm({
     sortOrder: number;
     isVisible: boolean;
     showInMenu: boolean;
+    imageId: string | null;
   };
   categories: Category[];
+  media: Media[];
   action: (prevState: CategoryFormState, formData: FormData) => Promise<CategoryFormState>;
 }) {
   const [state, formAction] = useActionState(action, {});
@@ -52,6 +61,7 @@ export function CategoryForm({
   const [parentId, setParentId] = useState(category.parentId || "__none__");
   const [isVisible, setIsVisible] = useState(category.isVisible);
   const [showInMenu, setShowInMenu] = useState(category.showInMenu);
+  const [imageId, setImageId] = useState<string | null>(category.imageId);
 
   const availableParents = categories.filter((c) => c.id !== category.id);
 
@@ -72,6 +82,7 @@ export function CategoryForm({
       <input type="hidden" name="parentId" value={parentId} />
       <input type="hidden" name="isVisible" value={isVisible ? "true" : "false"} />
       <input type="hidden" name="showInMenu" value={showInMenu ? "true" : "false"} />
+      <input type="hidden" name="imageId" value={imageId || ""} />
 
       <div className="grid gap-6 md:grid-cols-2">
         <div className="space-y-2">
@@ -87,10 +98,12 @@ export function CategoryForm({
 
       <div className="grid gap-6 md:grid-cols-2">
         <div className="space-y-2">
-          <Label>نوع المحتوى الافتراضي</Label>
+          <Label>نوع القسم</Label>
           <Select value={contentType} onValueChange={(v) => setContentType(v as PostType)}>
             <SelectTrigger>
-              <SelectValue />
+              <SelectValue>
+                {(v: string | null) => (v ? typeLabelMap[v] ?? v : "اختر النوع")}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {typeOptions.map((t) => (
@@ -106,10 +119,16 @@ export function CategoryForm({
           <Label>القسم الأب</Label>
           <Select value={parentId} onValueChange={(v) => setParentId(v ?? "__none__")}>
             <SelectTrigger>
-              <SelectValue placeholder="بدون أب" />
+              <SelectValue>
+                {(v: string | null) => {
+                  if (!v || v === "__none__") return "بدون أب (قسم رئيسي)";
+                  const cat = availableParents.find((c) => c.id === v);
+                  return cat ? cat.title : "بدون أب (قسم رئيسي)";
+                }}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__none__">بدون أب</SelectItem>
+              <SelectItem value="__none__">بدون أب (قسم رئيسي)</SelectItem>
               {availableParents.map((cat) => (
                 <SelectItem key={cat.id} value={cat.id}>
                   {cat.title}
@@ -130,6 +149,14 @@ export function CategoryForm({
         <Textarea id="description" name="description" defaultValue={category.description || ""} rows={3} />
       </div>
 
+      {/* Category image */}
+      <MediaPicker
+        media={media}
+        selectedId={imageId}
+        onSelect={(m) => setImageId(m ? m.id : null)}
+        label="صورة القسم"
+      />
+
       <div className="flex flex-wrap items-center gap-6">
         <div className="flex items-center gap-2">
           <Checkbox id="isVisible" checked={isVisible} onCheckedChange={(v) => setIsVisible(Boolean(v))} />
@@ -147,6 +174,7 @@ export function CategoryForm({
 
       <div className="flex items-center gap-2">
         <Button type="submit" disabled={pending}>
+          <Save className="h-4 w-4" />
           {pending ? "جاري الحفظ..." : "حفظ"}
         </Button>
       </div>

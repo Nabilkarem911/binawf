@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { Plus, FolderTree, Eye, EyeOff } from "lucide-react";
-import Image from "next/image";
+import { Plus, FolderTree } from "lucide-react";
+import { CategoryTree } from "@/components/admin/CategoryTree";
 
 export const dynamic = "force-dynamic";
 
@@ -10,12 +10,13 @@ type CategoryNode = {
   id: string;
   title: string;
   slug: string;
-  description: string | null;
   sortOrder: number;
   isVisible: boolean;
-  showInMenu: boolean;
-  image: { url: string } | null;
-  _count: { posts: number };
+  imageId: string | null;
+  imageUrl?: string | null;
+  postCount: number;
+  childCount: number;
+  parentId?: string | null;
   children: CategoryNode[];
 };
 
@@ -23,11 +24,11 @@ export default async function CategoriesListPage() {
   await requireAuth();
 
   const categories = await prisma.category.findMany({
+    where: { deletedAt: null },
     orderBy: { sortOrder: "asc" },
     include: {
-      parent: { select: { title: true } },
-      image: { select: { url: true } },
-      _count: { select: { posts: true } },
+      image: { select: { url: true, filename: true } },
+      _count: { select: { posts: true, children: true } },
     },
   });
 
@@ -40,12 +41,13 @@ export default async function CategoriesListPage() {
       id: cat.id,
       title: cat.title,
       slug: cat.slug,
-      description: cat.description,
       sortOrder: cat.sortOrder,
       isVisible: cat.isVisible,
-      showInMenu: cat.showInMenu,
-      image: cat.image,
-      _count: cat._count,
+      imageId: cat.imageId,
+      imageUrl: cat.image?.url,
+      postCount: cat._count.posts,
+      childCount: cat._count.children,
+      parentId: cat.parentId,
       children: [],
     });
   }
@@ -59,55 +61,12 @@ export default async function CategoriesListPage() {
     }
   }
 
-  function renderTree(nodes: CategoryNode[], depth: number = 0): React.ReactElement {
-    return (
-      <>
-        {nodes.map((node) => (
-          <div key={node.id}>
-            <Link
-              href={`/admin/categories/${node.id}`}
-              className="group flex items-center gap-3 rounded-xl border border-border/60 bg-card px-4 py-3 transition-all hover:shadow-card-hover hover:border-border"
-              style={{ marginRight: depth > 0 ? `${depth * 24}px` : undefined }}
-            >
-              {node.image ? (
-                <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg">
-                  <Image src={node.image.url} alt={node.title} fill className="object-cover" sizes="40px" unoptimized />
-                </div>
-              ) : (
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-secondary">
-                  <FolderTree className="h-5 w-5 text-muted-foreground/50" />
-                </div>
-              )}
-              <div className="min-w-0 flex-1">
-                <p className="font-semibold text-foreground group-hover:text-primary line-clamp-1">{node.title}</p>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span dir="ltr">{node.slug}</span>
-                  <span>•</span>
-                  <span>{node._count.posts} محتوى</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                {node.isVisible ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">
-                    <Eye className="h-3 w-3" /> مرئي
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600">
-                    <EyeOff className="h-3 w-3" /> مخفي
-                  </span>
-                )}
-              </div>
-            </Link>
-            {node.children.length > 0 && (
-              <div className="mt-1.5 space-y-1.5">
-                {renderTree(node.children, depth + 1)}
-              </div>
-            )}
-          </div>
-        ))}
-      </>
-    );
-  }
+  // Flat list for move dialog
+  const flatCategories = categories.map((c) => ({
+    id: c.id,
+    title: c.title,
+    parentId: c.parentId,
+  }));
 
   return (
     <div className="space-y-6">
@@ -141,8 +100,8 @@ export default async function CategoriesListPage() {
           </Link>
         </div>
       ) : (
-        <div className="space-y-1.5">
-          {renderTree(roots)}
+        <div className="rounded-2xl border border-border/60 bg-card/50 p-4 shadow-card">
+          <CategoryTree nodes={roots} allCategories={flatCategories} />
         </div>
       )}
     </div>

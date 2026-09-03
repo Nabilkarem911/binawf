@@ -248,9 +248,8 @@ test.describe("Admin dashboard", () => {
 
     const input = page.locator("input[type='file']");
     await input.setInputFiles(tmpFile);
-    await page.click("button:has-text('رفع الملفات')");
-
-    await expect(page.locator("body")).toContainText("تم رفع الملفات");
+    // New media library auto-uploads on file selection
+    await page.waitForTimeout(5000);
     await expect(page.locator("body")).toContainText("test-image.png");
 
     await takeScreenshot(page, "10-admin-media");

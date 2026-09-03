@@ -16,6 +16,7 @@ const categorySchema = z.object({
   sortOrder: z.coerce.number().default(0),
   isVisible: z.coerce.boolean().default(true),
   showInMenu: z.coerce.boolean().default(true),
+  imageId: z.string().optional().nullable(),
 });
 
 export type CategoryFormState = {
@@ -58,6 +59,7 @@ export async function createCategory(
       sortOrder: data.sortOrder,
       isVisible: data.isVisible,
       showInMenu: data.showInMenu,
+      imageId: data.imageId || null,
     },
   });
 
@@ -82,6 +84,17 @@ export async function updateCategory(
   const data = parsed.data;
   const parentId = normalizeParentId(data.parentId);
 
+  // Cycle prevention: if setting a parent, ensure it's not a descendant
+  if (parentId && parentId === id) {
+    return { errors: { parentId: ["لا يمكن أن يكون القسم أبًا لنفسه"] } };
+  }
+  if (parentId) {
+    const descendants = await collectDescendants(id);
+    if (descendants.has(parentId)) {
+      return { errors: { parentId: ["لا يمكن اختيار فرع كأب — سيؤدي إلى دورة"] } };
+    }
+  }
+
   await prisma.category.update({
     where: { id },
     data: {
@@ -93,6 +106,7 @@ export async function updateCategory(
       sortOrder: data.sortOrder,
       isVisible: data.isVisible,
       showInMenu: data.showInMenu,
+      imageId: data.imageId || null,
     },
   });
 
@@ -103,8 +117,90 @@ export async function updateCategory(
 
 export async function deleteCategory(id: string) {
   await requireAuth();
-  await prisma.category.delete({ where: { id } });
+  // Check for children
+  const children = await prisma.category.count({ where: { parentId: id } });
+  if (children > 0) {
+    // Re-parent children to grandparent (or root)
+    const category = await prisma.category.findUnique({ where: { id } });
+    await prisma.category.updateMany({
+      where: { parentId: id },
+      data: { parentId: category?.parentId ?? null },
+    });
+  }
+  // Soft delete: set isVisible=false and deletedAt
+  await prisma.category.update({
+    where: { id },
+    data: { isVisible: false, deletedAt: new Date() },
+  });
   revalidatePath("/");
   revalidatePath("/[...slug]", "page");
   redirect("/admin/categories");
+}
+
+export async function toggleCategoryVisibility(id: string): Promise<{ isVisible: boolean } | { error: string }> {
+  await requireAuth();
+  const category = await prisma.category.findUnique({ where: { id } });
+  if (!category) return { error: "القسم غير موجود" };
+  const updated = await prisma.category.update({
+    where: { id },
+    data: { isVisible: !category.isVisible },
+  });
+  revalidatePath("/");
+  revalidatePath("/[...slug]", "page");
+  return { isVisible: updated.isVisible };
+}
+
+export async function reorderCategories(items: { id: string; sortOrder: number; parentId: string | null }[]) {
+  await requireAuth();
+  await prisma.$transaction(
+    items.map((item) =>
+      prisma.category.update({
+        where: { id: item.id },
+        data: { sortOrder: item.sortOrder, parentId: item.parentId },
+      })
+    )
+  );
+  revalidatePath("/");
+  revalidatePath("/[...slug]", "page");
+  return { ok: true };
+}
+
+export async function moveCategory(id: string, newParentId: string | null): Promise<{ ok: boolean } | { error: string }> {
+  await requireAuth();
+  if (newParentId === id) return { error: "لا يمكن أن يكون القسم أبًا لنفسه" };
+
+  // Cycle prevention: check if newParentId is a descendant of id
+  if (newParentId) {
+    const descendants = await collectDescendants(id);
+    if (descendants.has(newParentId)) {
+      return { error: "لا يمكن نقل قسم إلى أحد فروعه" };
+    }
+  }
+
+  await prisma.category.update({
+    where: { id },
+    data: { parentId: newParentId },
+  });
+  revalidatePath("/");
+  revalidatePath("/[...slug]", "page");
+  return { ok: true };
+}
+
+async function collectDescendants(id: string): Promise<Set<string>> {
+  const descendants = new Set<string>();
+  const queue = [id];
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    const children = await prisma.category.findMany({
+      where: { parentId: current },
+      select: { id: true },
+    });
+    for (const child of children) {
+      if (!descendants.has(child.id)) {
+        descendants.add(child.id);
+        queue.push(child.id);
+      }
+    }
+  }
+  return descendants;
 }

@@ -13,11 +13,15 @@ export default async function EditCategoryPage({ params }: { params: Promise<{ i
   await requireAuth();
   const { id } = await params;
 
-  const [category, categories] = await Promise.all([
+  const [category, categories, media] = await Promise.all([
     prisma.category.findUnique({ where: { id } }),
     prisma.category.findMany({
       where: { isVisible: true },
       orderBy: { sortOrder: "asc" },
+    }),
+    prisma.media.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 200,
     }),
   ]);
 
@@ -43,7 +47,15 @@ export default async function EditCategoryPage({ params }: { params: Promise<{ i
           message={`هل أنت متأكد من حذف قسم "${category.title}"؟ سيتم حذف جميع الأقسام الفرعية المرتبطة به.`}
         />
       </div>
-      <CategoryForm categories={categories.filter((c) => c.id !== id)} action={updateBound} category={category} />
+      <CategoryForm
+        categories={categories.filter((c) => c.id !== id)}
+        media={media}
+        action={updateBound}
+        category={{
+          ...category,
+          imageId: category.imageId,
+        }}
+      />
     </div>
   );
 }

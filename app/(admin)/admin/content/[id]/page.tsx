@@ -13,14 +13,21 @@ export default async function EditContentPage({ params }: { params: Promise<{ id
   await requireAuth();
   const { id } = await params;
 
-  const [post, categories] = await Promise.all([
+  const [post, categories, media] = await Promise.all([
     prisma.post.findUnique({
       where: { id },
-      include: { category: { select: { id: true, title: true } } },
+      include: {
+        category: { select: { id: true, title: true } },
+        featuredImage: { select: { id: true, alt: true } },
+      },
     }),
     prisma.category.findMany({
       where: { isVisible: true },
       orderBy: { sortOrder: "asc" },
+    }),
+    prisma.media.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 200,
     }),
   ]);
 
@@ -48,10 +55,13 @@ export default async function EditContentPage({ params }: { params: Promise<{ id
       </div>
       <ContentForm
         categories={categories}
+        media={media}
         action={updateBound}
         post={{
           ...post,
           categoryId: post.category?.id ?? null,
+          featuredImageId: post.featuredImage?.id ?? null,
+          featuredImageAlt: post.featuredImage?.alt ?? "",
         }}
       />
     </div>

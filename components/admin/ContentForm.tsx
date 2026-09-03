@@ -9,15 +9,21 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { PostStatus, PostType, type Category } from "@prisma/client";
+import { PostStatus, PostType, type Category, type Media } from "@prisma/client";
 import type { PostFormState } from "@/app/(admin)/admin/content/actions";
 import { Save, Search, Star } from "lucide-react";
+import { MediaPicker } from "@/components/admin/MediaPicker";
+import { RichTextEditor } from "@/components/admin/RichTextEditor";
 
 const statusOptions = [
   { value: PostStatus.DRAFT, label: "مسودة", color: "bg-amber-100 text-amber-700" },
   { value: PostStatus.PUBLISHED, label: "منشور", color: "bg-green-100 text-green-700" },
   { value: PostStatus.ARCHIVED, label: "مؤرشف", color: "bg-gray-100 text-gray-600" },
 ];
+
+const statusLabelMap: Record<string, string> = Object.fromEntries(
+  statusOptions.map((s) => [s.value, s.label])
+);
 
 const typeOptions = [
   { value: PostType.PAGE, label: "صفحة" },
@@ -34,12 +40,18 @@ const typeOptions = [
   { value: PostType.VIRTUAL_EXHIBITION, label: "معرض افتراضي" },
 ];
 
+const typeLabelMap: Record<string, string> = Object.fromEntries(
+  typeOptions.map((t) => [t.value, t.label])
+);
+
 export function ContentForm({
   post,
   categories,
+  media,
   action,
 }: {
   post: {
+    id?: string;
     title: string;
     slug: string;
     excerpt: string | null;
@@ -51,8 +63,11 @@ export function ContentForm({
     metaDescription: string | null;
     keywords: string | null;
     isFeatured: boolean;
+    featuredImageId: string | null;
+    featuredImageAlt: string | null;
   };
   categories: Category[];
+  media: Media[];
   action: (prevState: PostFormState, formData: FormData) => Promise<PostFormState>;
 }) {
   const [state, formAction] = useActionState(action, {});
@@ -61,6 +76,9 @@ export function ContentForm({
   const [status, setStatus] = useState(post.status);
   const [categoryId, setCategoryId] = useState<string>(post.categoryId || "__none__");
   const [isFeatured, setIsFeatured] = useState(post.isFeatured);
+  const [featuredImageId, setFeaturedImageId] = useState<string | null>(post.featuredImageId);
+  const [featuredImageAlt, setFeaturedImageAlt] = useState(post.featuredImageAlt || "");
+  const [content, setContent] = useState(post.content || "");
 
   return (
     <form action={formAction} className="space-y-6">
@@ -77,6 +95,9 @@ export function ContentForm({
       <input type="hidden" name="status" value={status} />
       <input type="hidden" name="categoryId" value={categoryId} />
       <input type="hidden" name="isFeatured" value={isFeatured ? "true" : "false"} />
+      <input type="hidden" name="featuredImageId" value={featuredImageId || ""} />
+      <input type="hidden" name="featuredImageAlt" value={featuredImageAlt} />
+      <input type="hidden" name="content" value={content} />
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Main column */}
@@ -98,17 +119,13 @@ export function ContentForm({
           </div>
 
           <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-card">
-            <Label htmlFor="content" className="mb-2 block text-sm font-bold">المحتوى (HTML)</Label>
-            <Textarea
-              id="content"
-              name="content"
-              defaultValue={post.content || ""}
-              rows={16}
-              dir="ltr"
-              className="font-mono text-sm"
-              placeholder="<p>محتوى المقال...</p>"
+            <Label className="mb-2 block text-sm font-bold">المحتوى</Label>
+            <RichTextEditor
+              value={content}
+              onChange={setContent}
+              media={media}
+              placeholder="اكتب محتوى المقال هنا..."
             />
-            <p className="mt-2 text-xs text-muted-foreground">يدعم HTML — فقرات، صور، روابط، قوائم</p>
           </div>
         </div>
 
@@ -122,7 +139,9 @@ export function ContentForm({
                 <Label className="text-xs font-semibold text-muted-foreground">الحالة</Label>
                 <Select value={status} onValueChange={(v) => setStatus(v as PostStatus)}>
                   <SelectTrigger className="h-9">
-                    <SelectValue />
+                    <SelectValue>
+                      {(v: string | null) => (v ? statusLabelMap[v] ?? v : "اختر الحالة")}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {statusOptions.map((s) => (
@@ -149,6 +168,19 @@ export function ContentForm({
             </Button>
           </div>
 
+          {/* Featured Image */}
+          <MediaPicker
+            media={media}
+            selectedId={featuredImageId}
+            onSelect={(m) => {
+              setFeaturedImageId(m ? m.id : null);
+              if (m && !featuredImageAlt && m.alt) setFeaturedImageAlt(m.alt);
+            }}
+            altText={featuredImageAlt}
+            onAltTextChange={setFeaturedImageAlt}
+            label="الصورة الرئيسية"
+          />
+
           {/* Type + Category */}
           <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-card">
             <h3 className="mb-4 text-sm font-bold text-foreground">التصنيف</h3>
@@ -157,7 +189,9 @@ export function ContentForm({
                 <Label className="text-xs font-semibold text-muted-foreground">النوع</Label>
                 <Select value={type} onValueChange={(v) => setType(v as PostType)}>
                   <SelectTrigger className="h-9">
-                    <SelectValue />
+                    <SelectValue>
+                      {(v: string | null) => (v ? typeLabelMap[v] ?? v : "اختر النوع")}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {typeOptions.map((t) => (
@@ -172,7 +206,13 @@ export function ContentForm({
                 <Label className="text-xs font-semibold text-muted-foreground">القسم</Label>
                 <Select value={categoryId} onValueChange={(v) => setCategoryId(v ?? "__none__")}>
                   <SelectTrigger className="h-9">
-                    <SelectValue placeholder="اختياري" />
+                    <SelectValue>
+                      {(v: string | null) => {
+                        if (!v || v === "__none__") return "اختياري";
+                        const cat = categories.find((c) => c.id === v);
+                        return cat ? cat.title : "اختياري";
+                      }}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none__">بدون قسم</SelectItem>

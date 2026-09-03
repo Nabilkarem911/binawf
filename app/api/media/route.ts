@@ -147,6 +147,24 @@ export async function DELETE(request: Request) {
   const media = await prisma.media.findUnique({ where: { id } });
   if (!media) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+  // Check if media is referenced by posts or categories
+  const [postFeaturedCount, categoryImageCount, postMediaCount] = await Promise.all([
+    prisma.post.count({ where: { featuredImageId: id } }),
+    prisma.category.count({ where: { imageId: id } }),
+    prisma.postMedia.count({ where: { mediaId: id } }),
+  ]);
+
+  const refCount = postFeaturedCount + categoryImageCount + postMediaCount;
+  if (refCount > 0) {
+    return NextResponse.json(
+      {
+        error: `لا يمكن حذف هذه الوسائط لأنها مستخدمة في ${refCount} عنصر. أزل المراجع أولاً.`,
+        refCount,
+      },
+      { status: 409 }
+    );
+  }
+
   // Delete file from disk if it's a local upload
   if (media.url.includes("/api/media?filename=") || media.url.startsWith("/uploads/")) {
     try {
@@ -163,5 +181,30 @@ export async function DELETE(request: Request) {
   }
 
   await prisma.media.delete({ where: { id } });
+  return NextResponse.json({ ok: true });
+}
+
+export async function PATCH(request: Request) {
+  const session = await getAdminSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get("id");
+  if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+
+  const body = await request.json();
+  const { alt, caption } = body as { alt?: string; caption?: string };
+
+  const media = await prisma.media.findUnique({ where: { id } });
+  if (!media) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  await prisma.media.update({
+    where: { id },
+    data: {
+      ...(alt !== undefined ? { alt } : {}),
+      ...(caption !== undefined ? { caption } : {}),
+    },
+  });
+
   return NextResponse.json({ ok: true });
 }

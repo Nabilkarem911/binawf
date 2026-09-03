@@ -7,6 +7,7 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 import { Calendar, User as UserIcon, ArrowRight, Image as ImageIcon } from "lucide-react";
 import { GalleryLightbox } from "@/components/public/GalleryLightbox";
 import { ShareButton } from "@/components/public/ShareButton";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 type PostWithRelations = Post & {
   author: { name: string } | null;
@@ -125,7 +126,7 @@ export async function PostPage({ post }: { post: PostWithRelations }) {
       {post.content ? (
         <div
           className="prose-art mx-auto mt-8 max-w-3xl"
-          dangerouslySetInnerHTML={{ __html: post.content }}
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.content) }}
         />
       ) : null}
 
