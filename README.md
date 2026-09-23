@@ -368,13 +368,13 @@ docker compose up -d --build
 **على السيرفر (مثبّت تلقائيًا):**
 
 ```bash
-/usr/local/bin/binawf-backup.sh db       # نسخة كاملة للداتابيز (+ التحقق من صلاحيتها)
-/usr/local/bin/binawf-backup.sh uploads  # أرشيف كل الصور
+`binawf-backup.sh` (مثبّت في PATH) db       # نسخة كاملة للداتابيز (+ التحقق من صلاحيتها)
+`binawf-backup.sh` (مثبّت في PATH) uploads  # أرشيف كل الصور
 ```
 
 - **يومي 3:30 صباحًا** (بتوقيت السعودية) للداتابيز — بيحتفظ بآخر **14** نسخة.
 - **أسبوعي (الجمعة)** للصور — آخر **6** نسخ.
-- اللوج: `/home/gpack/backups/binawf/backup.log` · وكل نسخة بتتحقق من نفسها (`pg_restore -l` / `tar tzf`) — النسخة اللي مش بتتقرا بتتسجّل `FAIL` ومش بتُعتبر باكاب.
+- اللوج: `/home/<user>/backups/binawf/backup.log` · وكل نسخة بتتحقق من نفسها (`pg_restore -l` / `tar tzf`) — النسخة اللي مش بتتقرا بتتسجّل `FAIL` ومش بتُعتبر باكاب.
 
 **الاستعادة (اختبار حقيقي لازم يتعمل دوريًا):**
 
