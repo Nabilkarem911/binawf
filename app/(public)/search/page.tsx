@@ -136,9 +136,11 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
                     )}
                     <div className="min-w-0 flex-1">
                       {post.category ? (
-                        <span className="text-xs font-semibold text-accent">{post.category.title}</span>
+                        <span className="inline-block rounded-full bg-art-sky/10 px-2 py-0.5 text-xs font-semibold text-art-sky">
+                          {post.category.title}
+                        </span>
                       ) : null}
-                      <p className="font-bold text-foreground line-clamp-1 group-hover:text-primary">{post.title}</p>
+                      <p className="mt-1 font-bold text-foreground line-clamp-1 group-hover:text-primary">{post.title}</p>
                       {post.excerpt ? (
                         <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">{post.excerpt}</p>
                       ) : null}
@@ -184,7 +186,10 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
                       </div>
                     )}
                     <div className="min-w-0 flex-1">
-                      <p className="font-bold text-foreground line-clamp-1 group-hover:text-primary">{cat.title}</p>
+                      <span className="inline-block rounded-full bg-art-violet/10 px-2 py-0.5 text-xs font-semibold text-art-violet">
+                        قسم
+                      </span>
+                      <p className="mt-1 font-bold text-foreground line-clamp-1 group-hover:text-primary">{cat.title}</p>
                       {cat.description ? (
                         <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">{cat.description}</p>
                       ) : null}

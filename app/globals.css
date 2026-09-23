@@ -9,8 +9,8 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
-  --font-display: var(--font-sans);
+  --font-heading: var(--font-display);
+  --font-display: var(--font-display);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -47,6 +47,18 @@
   --color-navy-light: var(--navy-light);
   --color-navy-foreground: var(--navy-foreground);
   --color-cream: var(--cream);
+  --color-art-teal: var(--art-teal);
+  --color-art-teal-foreground: var(--art-teal-foreground);
+  --color-art-coral: var(--art-coral);
+  --color-art-coral-foreground: var(--art-coral-foreground);
+  --color-art-violet: var(--art-violet);
+  --color-art-violet-foreground: var(--art-violet-foreground);
+  --color-art-emerald: var(--art-emerald);
+  --color-art-emerald-foreground: var(--art-emerald-foreground);
+  --color-art-sky: var(--art-sky);
+  --color-art-sky-foreground: var(--art-sky-foreground);
+  --color-art-rose: var(--art-rose);
+  --color-art-rose-foreground: var(--art-rose-foreground);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -98,6 +110,20 @@
   --sidebar-accent-foreground: oklch(0.95 0.005 260);
   --sidebar-border: oklch(0.32 0.05 260);
   --sidebar-ring: var(--gold);
+
+  /* Art accent palette — gives each content type its own identity color */
+  --art-teal: oklch(0.60 0.11 195);
+  --art-teal-foreground: oklch(0.98 0.01 195);
+  --art-coral: oklch(0.64 0.18 40);
+  --art-coral-foreground: oklch(0.98 0.01 40);
+  --art-violet: oklch(0.55 0.19 290);
+  --art-violet-foreground: oklch(0.97 0.01 290);
+  --art-emerald: oklch(0.60 0.14 165);
+  --art-emerald-foreground: oklch(0.98 0.01 165);
+  --art-sky: oklch(0.55 0.15 240);
+  --art-sky-foreground: oklch(0.98 0.01 240);
+  --art-rose: oklch(0.62 0.20 15);
+  --art-rose-foreground: oklch(0.98 0.01 15);
 }
 
 .dark {
@@ -128,6 +154,19 @@
   --sidebar: oklch(0.12 0.03 260);
   --sidebar-foreground: oklch(0.95 0.005 260);
   --sidebar-border: oklch(0.22 0.03 260);
+
+  --art-teal: oklch(0.68 0.11 195);
+  --art-teal-foreground: oklch(0.14 0.03 195);
+  --art-coral: oklch(0.70 0.16 40);
+  --art-coral-foreground: oklch(0.16 0.04 40);
+  --art-violet: oklch(0.65 0.18 290);
+  --art-violet-foreground: oklch(0.15 0.04 290);
+  --art-emerald: oklch(0.68 0.13 165);
+  --art-emerald-foreground: oklch(0.14 0.03 165);
+  --art-sky: oklch(0.65 0.14 240);
+  --art-sky-foreground: oklch(0.15 0.04 240);
+  --art-rose: oklch(0.68 0.18 15);
+  --art-rose-foreground: oklch(0.15 0.04 15);
 }
 
 @layer base {
@@ -176,6 +215,116 @@
   }
   .shadow-navy {
     box-shadow: 0 20px 60px -12px oklch(0.22 0.06 260 / 0.25);
+  }
+
+  /* Multi-color mesh gradient — replaces the flat navy gradient on hero/CTA */
+  .gradient-mesh {
+    background:
+      radial-gradient(55% 60% at 85% 0%, color-mix(in oklch, var(--art-violet) 32%, transparent), transparent 70%),
+      radial-gradient(45% 55% at 8% 85%, color-mix(in oklch, var(--art-teal) 28%, transparent), transparent 70%),
+      radial-gradient(35% 40% at 55% 100%, color-mix(in oklch, var(--gold) 16%, transparent), transparent 70%),
+      linear-gradient(150deg, var(--navy) 0%, oklch(0.29 0.09 275) 55%, oklch(0.32 0.10 235) 100%);
+  }
+
+  /* Light tinted section background — --tint customizes the accent color */
+  .section-tint {
+    background:
+      radial-gradient(50% 55% at 90% 0%, color-mix(in oklch, var(--tint, var(--art-violet)) 7%, transparent), transparent 75%),
+      radial-gradient(40% 50% at 5% 100%, color-mix(in oklch, var(--tint, var(--art-violet)) 5%, transparent), transparent 75%),
+      var(--cream);
+  }
+
+  /* Glassmorphism surface for cards floating on dark backgrounds */
+  .glass {
+    background: oklch(1 0 0 / 0.09);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    border: 1px solid oklch(1 0 0 / 0.16);
+  }
+
+  /* Film-grain overlay — add `grain` to a relative container */
+  .grain {
+    position: relative;
+  }
+  .grain::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0.05;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* Gold gradient text for hero headlines */
+  .text-gradient-gold {
+    background: linear-gradient(115deg, var(--gold-light) 0%, var(--gold) 45%, oklch(0.68 0.16 55) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Scroll-reveal — paired with RevealOnScroll which toggles .is-visible */
+  .reveal {
+    opacity: 0;
+    transform: translateY(28px);
+    transition:
+      opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+    transition-delay: var(--reveal-delay, 0ms);
+  }
+  .reveal.is-visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Gentle floating loop for hero collage cards */
+  .animate-float {
+    animation: float-y 7s ease-in-out infinite;
+  }
+  .animate-float-slow {
+    animation: float-y 9.5s ease-in-out infinite;
+  }
+
+  /* Sticky header gains a shadow as the page scrolls (Chromium; progressive enhancement) */
+  @supports (animation-timeline: scroll()) {
+    .header-scroll {
+      animation: header-shadow linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0px 90px;
+    }
+  }
+}
+
+@keyframes float-y {
+  0%,
+  100% {
+    transform: translateY(0) rotate(var(--float-rotate, 0deg));
+  }
+  50% {
+    transform: translateY(-12px) rotate(var(--float-rotate, 0deg));
+  }
+}
+
+@keyframes header-shadow {
+  to {
+    box-shadow: 0 10px 32px -14px oklch(0.22 0.06 260 / 0.35);
+    border-color: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .animate-float,
+  .animate-float-slow {
+    animation: none;
+  }
+  html {
+    scroll-behavior: auto;
   }
 }
 

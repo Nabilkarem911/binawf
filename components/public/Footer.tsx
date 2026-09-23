@@ -10,7 +10,9 @@ export async function Footer() {
   const standalone = nav.filter((item) => item.children.length === 0);
 
   return (
-    <footer className="mt-auto w-full bg-navy text-navy-foreground">
+    <footer className="relative mt-auto w-full bg-navy text-navy-foreground">
+      {/* Artistic accent line */}
+      <div className="h-1 bg-gradient-to-l from-art-violet via-gold to-art-teal" aria-hidden="true" />
       <div className="container-page py-12 lg:py-16">
         <div className="grid gap-10 lg:grid-cols-12">
           {/* Brand column */}
@@ -20,7 +22,7 @@ export async function Footer() {
                 <Palette className="h-6 w-6" />
               </span>
               <div>
-                <p className="text-lg font-extrabold text-white">{settings.title}</p>
+                <p className="font-display text-lg font-extrabold text-white">{settings.title}</p>
                 <p className="text-xs text-white/60">{settings.subtitle}</p>
               </div>
             </div>

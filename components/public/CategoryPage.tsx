@@ -3,7 +3,7 @@ import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import { PostStatus, type Category } from "@prisma/client";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
-import { Calendar, ArrowLeft, Image as ImageIcon, FolderTree } from "lucide-react";
+import { Calendar, ArrowLeft, Image as ImageIcon, FolderTree, Palette } from "lucide-react";
 
 type CategoryWithImage = Category & {
   image: { url: string; alt: string | null } | null;
@@ -82,7 +82,7 @@ export async function CategoryPage({ category }: { category: CategoryWithImage }
       {/* Category Header */}
       <div className="mb-10">
         {category.image ? (
-          <div className="relative mb-6 aspect-[21/9] w-full overflow-hidden rounded-3xl">
+          <div className="relative mb-6 aspect-[21/9] w-full overflow-hidden rounded-[2rem]">
             <Image
               src={category.image.url}
               alt={category.image.alt ?? category.title}
@@ -91,20 +91,32 @@ export async function CategoryPage({ category }: { category: CategoryWithImage }
               priority
               sizes="(max-width: 1200px) 100vw, 75vw"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-navy/80 via-navy/20 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-navy/85 via-navy/30 to-transparent" />
             <div className="absolute bottom-0 right-0 left-0 p-6 sm:p-8 lg:p-10">
-              <h1 className="text-3xl font-black text-white sm:text-4xl lg:text-5xl">{category.title}</h1>
+              <h1 className="font-display text-3xl font-black text-white sm:text-4xl lg:text-5xl">{category.title}</h1>
               {category.description ? (
                 <p className="mt-2 max-w-2xl text-base text-white/85 sm:text-lg">{category.description}</p>
+              ) : null}
+              {posts.length > 0 ? (
+                <span className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">
+                  {posts.length} محتوى
+                </span>
               ) : null}
             </div>
           </div>
         ) : (
-          <div>
-            <h1 className="text-3xl font-black tracking-tight text-foreground sm:text-4xl lg:text-5xl">{category.title}</h1>
-            {category.description ? (
-              <p className="mt-3 max-w-2xl text-lg text-muted-foreground">{category.description}</p>
-            ) : null}
+          <div className="gradient-mesh grain relative mb-6 overflow-hidden rounded-[2rem] px-6 py-10 text-white sm:px-10 sm:py-12">
+            <div className="relative z-10">
+              <h1 className="font-display text-3xl font-black tracking-tight sm:text-4xl lg:text-5xl">{category.title}</h1>
+              {category.description ? (
+                <p className="mt-3 max-w-2xl text-base text-white/75 sm:text-lg">{category.description}</p>
+              ) : null}
+              {posts.length > 0 ? (
+                <span className="glass mt-5 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold text-white">
+                  {posts.length} محتوى
+                </span>
+              ) : null}
+            </div>
           </div>
         )}
       </div>
@@ -112,14 +124,16 @@ export async function CategoryPage({ category }: { category: CategoryWithImage }
       {/* Sub-categories */}
       {children.length > 0 && (
         <section className="mb-12">
-          <h2 className="mb-5 flex items-center gap-2 text-xl font-bold text-foreground">
-            <FolderTree className="h-5 w-5 text-accent" />
+          <h2 className="font-display mb-5 flex items-center gap-2 text-xl font-bold text-foreground">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-art-violet/10 text-art-violet">
+              <FolderTree className="h-4 w-4" />
+            </span>
             الأقسام الفرعية
           </h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {children.map((child) => (
               <Link key={child.id} href={`/${child.slug}`} className="group">
-                <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-border/60 bg-card transition-all duration-300 hover:shadow-card-hover">
+                <article className="flex h-full flex-col overflow-hidden rounded-3xl border border-border/60 bg-card transition-all duration-300 hover:-translate-y-1 hover:shadow-card-hover">
                   {child.image ? (
                     <div className="relative aspect-[16/10] w-full overflow-hidden">
                       <Image
@@ -131,8 +145,8 @@ export async function CategoryPage({ category }: { category: CategoryWithImage }
                       />
                     </div>
                   ) : (
-                    <div className="flex aspect-[16/10] w-full items-center justify-center bg-secondary">
-                      <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
+                    <div className="bg-navy-gradient flex aspect-[16/10] w-full items-center justify-center">
+                      <Palette className="h-8 w-8 text-gold/60" />
                     </div>
                   )}
                   <div className="p-4">
@@ -151,7 +165,7 @@ export async function CategoryPage({ category }: { category: CategoryWithImage }
       {/* Posts */}
       {posts.length > 0 && (
         <section>
-          <h2 className="mb-5 text-xl font-bold text-foreground">المحتوى</h2>
+          <h2 className="font-display mb-5 text-xl font-bold text-foreground">المحتوى</h2>
           {isGallery ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {posts.map((post) => (
@@ -192,7 +206,7 @@ export async function CategoryPage({ category }: { category: CategoryWithImage }
 function PostCard({ post, categorySlug }: { post: PostWithImage; categorySlug: string }) {
   return (
     <Link href={`/${categorySlug}/${post.slug}`} className="group block h-full">
-      <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-border/60 bg-card transition-all duration-300 hover:shadow-card-hover">
+      <article className="flex h-full flex-col overflow-hidden rounded-3xl border border-border/60 bg-card transition-all duration-300 hover:-translate-y-1 hover:shadow-card-hover">
         {post.featuredImage ? (
           <div className="relative aspect-[16/10] w-full overflow-hidden">
             <Image
@@ -202,10 +216,11 @@ function PostCard({ post, categorySlug }: { post: PostWithImage; categorySlug: s
               className="object-cover transition-transform duration-500 group-hover:scale-105"
               sizes="(max-width: 768px) 100vw, 33vw"
             />
+            <div className="absolute inset-0 bg-gradient-to-t from-navy/30 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
           </div>
         ) : (
-          <div className="flex aspect-[16/10] w-full items-center justify-center bg-secondary">
-            <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
+          <div className="bg-navy-gradient flex aspect-[16/10] w-full items-center justify-center">
+            <Palette className="h-9 w-9 text-gold/60" />
           </div>
         )}
         <div className="flex flex-1 flex-col p-5">
@@ -232,7 +247,7 @@ function PostCard({ post, categorySlug }: { post: PostWithImage; categorySlug: s
 function GalleryCard({ post, categorySlug }: { post: PostWithImage; categorySlug: string }) {
   return (
     <Link href={`/${categorySlug}/${post.slug}`} className="group block">
-      <article className="relative aspect-square overflow-hidden rounded-2xl border border-border/60 bg-card transition-all duration-300 hover:shadow-card-hover">
+      <article className="relative aspect-square overflow-hidden rounded-3xl border border-border/60 bg-card transition-all duration-300 hover:-translate-y-1 hover:shadow-card-hover">
         {post.featuredImage ? (
           <Image
             src={post.featuredImage.url}

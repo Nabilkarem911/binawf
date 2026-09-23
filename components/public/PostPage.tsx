@@ -4,7 +4,7 @@ import { formatHijriDate } from "@/lib/site";
 import { prisma } from "@/lib/prisma";
 import { PostStatus, type Post } from "@prisma/client";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
-import { Calendar, User as UserIcon, ArrowRight, Image as ImageIcon } from "lucide-react";
+import { Calendar, User as UserIcon, ArrowRight, Palette } from "lucide-react";
 import { GalleryLightbox } from "@/components/public/GalleryLightbox";
 import { ShareButton } from "@/components/public/ShareButton";
 import { sanitizeHtml } from "@/lib/sanitize";
@@ -74,12 +74,12 @@ export async function PostPage({ post }: { post: PostWithRelations }) {
         {post.category ? (
           <Link
             href={`/${post.category.slug}`}
-            className="inline-block rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-primary mb-4 hover:bg-accent/20"
+            className="mb-4 inline-flex items-center gap-1.5 rounded-full bg-art-violet/10 px-3.5 py-1.5 text-xs font-semibold text-art-violet transition-colors hover:bg-art-violet/20"
           >
             {post.category.title}
           </Link>
         ) : null}
-        <h1 className="text-3xl font-black leading-tight tracking-tight text-foreground sm:text-4xl lg:text-5xl text-balance">
+        <h1 className="font-display text-3xl font-black leading-tight tracking-tight text-foreground sm:text-4xl lg:text-5xl text-balance">
           {post.title}
         </h1>
 
@@ -149,7 +149,7 @@ export async function PostPage({ post }: { post: PostWithRelations }) {
       {/* Gallery */}
       {isGallery && galleryImages.length > 0 ? (
         <div className="mx-auto mt-12 max-w-5xl">
-          <h2 className="mb-5 text-xl font-bold text-foreground">معرض الصور</h2>
+          <h2 className="font-display mb-5 text-xl font-bold text-foreground">معرض الصور</h2>
           <GalleryLightbox images={galleryImages} />
         </div>
       ) : null}
@@ -157,11 +157,11 @@ export async function PostPage({ post }: { post: PostWithRelations }) {
       {/* Related content */}
       {related.length > 0 ? (
         <div className="mx-auto mt-16 max-w-5xl border-t border-border pt-10">
-          <h2 className="mb-6 text-xl font-bold text-foreground">محتوى ذو صلة</h2>
+          <h2 className="font-display mb-6 text-xl font-bold text-foreground">محتوى ذو صلة</h2>
           <div className="grid gap-5 sm:grid-cols-3">
             {related.map((rp) => (
               <Link key={rp.id} href={`/${post.category?.slug ?? "articles"}/${rp.slug}`} className="group">
-                <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-border/60 bg-card transition-all duration-300 hover:shadow-card-hover">
+                <article className="flex h-full flex-col overflow-hidden rounded-3xl border border-border/60 bg-card transition-all duration-300 hover:-translate-y-1 hover:shadow-card-hover">
                   {rp.featuredImage ? (
                     <div className="relative aspect-[16/10] w-full overflow-hidden">
                       <Image
@@ -171,10 +171,11 @@ export async function PostPage({ post }: { post: PostWithRelations }) {
                         className="object-cover transition-transform duration-500 group-hover:scale-105"
                         sizes="33vw"
                       />
+                      <div className="absolute inset-0 bg-gradient-to-t from-navy/30 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                     </div>
                   ) : (
-                    <div className="flex aspect-[16/10] w-full items-center justify-center bg-secondary">
-                      <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
+                    <div className="bg-navy-gradient flex aspect-[16/10] w-full items-center justify-center">
+                      <Palette className="h-8 w-8 text-gold/60" />
                     </div>
                   )}
                   <div className="p-4">
