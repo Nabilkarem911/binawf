@@ -63,7 +63,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in your .env}
       POSTGRES_DB: ${POSTGRES_DB:-binawf}
     volumes:
-      - dbdata:/var/lib/postgresql
+      - db18data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-binawf} -d ${POSTGRES_DB:-binawf}"]
       interval: 5s
@@ -75,7 +75,7 @@ services:
       - default
 
 volumes:
-  dbdata:
+  db18data:
   uploads:
 
 networks:
