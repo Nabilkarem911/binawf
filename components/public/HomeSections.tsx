@@ -216,7 +216,7 @@ async function HeroSection({ section, settings }: { section: HomepageSection; se
             </RevealOnScroll>
             <RevealOnScroll delay={90}>
               <h1 className="font-display mt-6 text-4xl leading-[1.15] font-black tracking-tight text-balance sm:text-5xl lg:text-6xl">
-                <span className="text-gradient-gold">{title}</span>
+                <span className="text-gold-light">{title}</span>
               </h1>
             </RevealOnScroll>
             <RevealOnScroll delay={180}>
