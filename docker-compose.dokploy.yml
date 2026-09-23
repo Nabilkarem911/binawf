@@ -1,0 +1,84 @@
+# Dokploy deployment for binawf (موهبة فنان) — used when deploying through Dokploy.
+# The portable docker-compose.yml in the repo root stays generic (no Traefik labels,
+# no dokploy-network, publishes a host port) — this file is the Dokploy-specific one:
+#   * no host port published (Traefik reaches the container on 3000)
+#   * joined to dokploy-network so Traefik can route to it
+#   * explicit Traefik labels for binawf.gpack.tech
+# Deploy: Dokploy (composePath = ./docker-compose.dokploy.yml) or manually:
+#   docker compose -p binawf-binawf-3eksl --env-file .env -f docker-compose.dokploy.yml up -d --build
+name: binawf
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:?Set NEXT_PUBLIC_SITE_URL in your .env}
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-binawf}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in your .env}@db:5432/${POSTGRES_DB:-binawf}?schema=public
+      SESSION_SECRET: ${SESSION_SECRET:?Set SESSION_SECRET (32+ chars) in your .env}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@binawf.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD (12+ chars) in your .env}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+      NODE_ENV: production
+      MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-25}
+    volumes:
+      # uploaded media survives redeploys/restarts
+      - uploads:/app/public/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    labels:
+      - traefik.docker.network=dokploy-network
+      - traefik.enable=true
+      - traefik.http.routers.binawf-binawf-3eksl-web.rule=Host(`binawf.gpack.tech`)
+      - traefik.http.routers.binawf-binawf-3eksl-web.entrypoints=web
+      - traefik.http.services.binawf-binawf-3eksl-web.loadbalancer.server.port=3000
+      - traefik.http.routers.binawf-binawf-3eksl-web.service=binawf-binawf-3eksl-web
+      - traefik.http.routers.binawf-binawf-3eksl-web.middlewares=redirect-to-https@file
+      - traefik.http.routers.binawf-binawf-3eksl-websecure.rule=Host(`binawf.gpack.tech`)
+      - traefik.http.routers.binawf-binawf-3eksl-websecure.entrypoints=websecure
+      - traefik.http.services.binawf-binawf-3eksl-websecure.loadbalancer.server.port=3000
+      - traefik.http.routers.binawf-binawf-3eksl-websecure.service=binawf-binawf-3eksl-websecure
+      - traefik.http.routers.binawf-binawf-3eksl-websecure.tls.certresolver=letsencrypt
+    networks:
+      - dokploy-network
+      - default
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-binawf}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in your .env}
+      POSTGRES_DB: ${POSTGRES_DB:-binawf}
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-binawf} -d ${POSTGRES_DB:-binawf}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - default
+
+volumes:
+  dbdata:
+  uploads:
+
+networks:
+  default:
+  dokploy-network:
+    external: true
