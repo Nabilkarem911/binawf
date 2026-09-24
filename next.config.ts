@@ -2,7 +2,13 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
-    unoptimized: true,
+    // Media files are served through /api/media?filename=... (guarded endpoint:
+    // extension allowlist + magic-byte sniff + path-traversal defense). Next 16
+    // requires localPatterns for local image srcs that carry a query string.
+    localPatterns: [
+      { pathname: "/api/media" },
+      { pathname: "/uploads/**" },
+    ],
   },
   async headers() {
     return [
