@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePublic } from "@/lib/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
@@ -60,7 +60,6 @@ export async function updateSettings(
     }),
   ]);
 
-  revalidatePath("/");
-  revalidatePath("/[...slug]", "page");
+  revalidatePublic();
   return { message: "تم حفظ الإعدادات بنجاح." };
 }

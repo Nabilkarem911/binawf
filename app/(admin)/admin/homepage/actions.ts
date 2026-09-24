@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePublic } from "@/lib/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 import { z } from "zod";
@@ -23,8 +23,7 @@ export async function toggleHomepageSection(_: unknown, formData: FormData) {
     data: { isVisible: parsed.data.isVisible === "true" },
   });
 
-  revalidatePath("/");
-  revalidatePath("/[...slug]", "page");
+  revalidatePublic();
   return { ok: true };
 }
 
@@ -42,7 +41,7 @@ export async function reorderHomepageSections(_: unknown, formData: FormData) {
     });
   }
 
-  revalidatePath("/");
+  revalidatePublic();
   return { ok: true };
 }
 
@@ -59,6 +58,6 @@ export async function updateHomepageSectionTitle(_: unknown, formData: FormData)
     data: { title, subtitle: subtitle || null },
   });
 
-  revalidatePath("/");
+  revalidatePublic();
   return { ok: true };
 }

@@ -2,6 +2,7 @@ import { readFile, writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/auth";
+import { revalidatePublic } from "@/lib/cache";
 import { prisma } from "@/lib/prisma";
 import { MediaType } from "@prisma/client";
 
@@ -206,5 +207,6 @@ export async function PATCH(request: Request) {
     },
   });
 
+  revalidatePublic();
   return NextResponse.json({ ok: true });
 }

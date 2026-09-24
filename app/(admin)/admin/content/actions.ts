@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePublic } from "@/lib/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
@@ -73,8 +73,7 @@ export async function createPost(prevState: PostFormState, formData: FormData): 
     },
   });
 
-  revalidatePath("/");
-  revalidatePath("/[...slug]", "page");
+  revalidatePublic();
   redirect("/admin/content");
 }
 
@@ -117,15 +116,13 @@ export async function updatePost(
     },
   });
 
-  revalidatePath("/");
-  revalidatePath("/[...slug]", "page");
+  revalidatePublic();
   redirect("/admin/content");
 }
 
 export async function deletePost(id: string) {
   await requireAuth();
   await prisma.post.delete({ where: { id } });
-  revalidatePath("/");
-  revalidatePath("/[...slug]", "page");
+  revalidatePublic();
   redirect("/admin/content");
 }

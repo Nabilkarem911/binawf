@@ -1,6 +1,5 @@
 import { HomepageSectionRenderer } from "@/components/public/HomeSections";
-import { getSiteSettings } from "@/lib/site";
-import { prisma } from "@/lib/prisma";
+import { getSiteSettings, getHomepageSections } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
@@ -15,10 +14,7 @@ export async function generateMetadata() {
 export default async function HomePage() {
   const [settings, sections] = await Promise.all([
     getSiteSettings(),
-    prisma.homepageSection.findMany({
-      where: { isVisible: true },
-      orderBy: { sortOrder: "asc" },
-    }),
+    getHomepageSections(),
   ]);
 
   return (

@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePublic } from "@/lib/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
@@ -63,8 +63,7 @@ export async function createCategory(
     },
   });
 
-  revalidatePath("/");
-  revalidatePath("/[...slug]", "page");
+  revalidatePublic();
   redirect("/admin/categories");
 }
 
@@ -110,8 +109,7 @@ export async function updateCategory(
     },
   });
 
-  revalidatePath("/");
-  revalidatePath("/[...slug]", "page");
+  revalidatePublic();
   redirect("/admin/categories");
 }
 
@@ -132,8 +130,7 @@ export async function deleteCategory(id: string) {
     where: { id },
     data: { isVisible: false, deletedAt: new Date() },
   });
-  revalidatePath("/");
-  revalidatePath("/[...slug]", "page");
+  revalidatePublic();
   redirect("/admin/categories");
 }
 
@@ -145,8 +142,7 @@ export async function toggleCategoryVisibility(id: string): Promise<{ isVisible:
     where: { id },
     data: { isVisible: !category.isVisible },
   });
-  revalidatePath("/");
-  revalidatePath("/[...slug]", "page");
+  revalidatePublic();
   return { isVisible: updated.isVisible };
 }
 
@@ -160,8 +156,7 @@ export async function reorderCategories(items: { id: string; sortOrder: number; 
       })
     )
   );
-  revalidatePath("/");
-  revalidatePath("/[...slug]", "page");
+  revalidatePublic();
   return { ok: true };
 }
 
@@ -181,8 +176,7 @@ export async function moveCategory(id: string, newParentId: string | null): Prom
     where: { id },
     data: { parentId: newParentId },
   });
-  revalidatePath("/");
-  revalidatePath("/[...slug]", "page");
+  revalidatePublic();
   return { ok: true };
 }
 

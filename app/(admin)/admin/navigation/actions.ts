@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePublic } from "@/lib/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
@@ -63,8 +63,7 @@ export async function createNavigationItem(
     },
   });
 
-  revalidatePath("/");
-  revalidatePath("/[...slug]", "page");
+  revalidatePublic();
   redirect("/admin/navigation");
 }
 
@@ -102,16 +101,14 @@ export async function updateNavigationItem(
     },
   });
 
-  revalidatePath("/");
-  revalidatePath("/[...slug]", "page");
+  revalidatePublic();
   redirect("/admin/navigation");
 }
 
 export async function deleteNavigationItem(id: string) {
   await requireAuth();
   await prisma.navigationItem.delete({ where: { id } });
-  revalidatePath("/");
-  revalidatePath("/[...slug]", "page");
+  revalidatePublic();
   redirect("/admin/navigation");
 }
 
@@ -126,8 +123,7 @@ export async function toggleNavigationVisibility(id: string): Promise<boolean> {
     data: { isVisible },
   });
 
-  revalidatePath("/");
-  revalidatePath("/[...slug]", "page");
+  revalidatePublic();
   return isVisible;
 }
 
@@ -147,6 +143,5 @@ export async function reorderNavigationItems(
     )
   );
 
-  revalidatePath("/");
-  revalidatePath("/[...slug]", "page");
+  revalidatePublic();
 }

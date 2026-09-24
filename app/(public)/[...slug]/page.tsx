@@ -4,7 +4,15 @@ import { PostStatus } from "@prisma/client";
 import { CategoryPage } from "@/components/public/CategoryPage";
 import { PostPage } from "@/components/public/PostPage";
 
-export const dynamic = "force-dynamic";
+// ISR: Next 16 requires generateStaticParams to enable output caching on a
+// dynamic route — an empty array prerenders nothing (no DB needed at build)
+// while dynamicParams lets unknown slugs render on-demand and get cached.
+// CMS writes bust the cache instantly via revalidatePublic().
+export const revalidate = 60;
+
+export function generateStaticParams() {
+  return [];
+}
 
 type PageParams = {
   slug: string[];

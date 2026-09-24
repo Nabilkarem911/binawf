@@ -34,6 +34,13 @@ type PostWithRelations = Post & {
   featuredImage: { url: string; alt: string | null } | null;
 };
 
+// Sections arrive from a JSON-serialized cache (lib/site.ts) — only the
+// scalar fields the renderers consume; Date columns stay out on purpose.
+type SectionProps = Pick<
+  HomepageSection,
+  "id" | "title" | "type" | "subtitle" | "settings" | "sortOrder"
+>;
+
 type CategoryWithImage = Category & {
   image: { url: string; alt: string | null } | null;
   _count?: { posts: number };
@@ -176,7 +183,7 @@ const HERO_SLOTS = [
 ];
 const HERO_FALLBACK_ICONS: LucideIcon[] = [Palette, Brush, Sparkles];
 
-async function HeroSection({ section, settings }: { section: HomepageSection; settings: { title: string; subtitle: string; description: string } }) {
+async function HeroSection({ section, settings }: { section: SectionProps; settings: { title: string; subtitle: string; description: string } }) {
   const cfg = (section.settings ?? {}) as Record<string, string>;
   const title = cfg.title || settings.title;
   const subtitle = cfg.subtitle || settings.subtitle;
@@ -310,7 +317,7 @@ async function HeroSection({ section, settings }: { section: HomepageSection; se
 }
 
 /* ═══════════════ Featured Categories ═══════════════ */
-function FeaturedCategoriesSection({ section }: { section: HomepageSection }) {
+function FeaturedCategoriesSection({ section }: { section: SectionProps }) {
   const meta = SECTION_META.FEATURED_CATEGORIES;
   return (
     <section className="container-page py-12 lg:py-16">
@@ -374,7 +381,7 @@ async function CategoriesRenderer({ categoriesPromise }: { categoriesPromise: Pr
 }
 
 /* ═══════════════ Latest News — editorial layout ═══════════════ */
-function LatestNewsSection({ section }: { section: HomepageSection }) {
+function LatestNewsSection({ section }: { section: SectionProps }) {
   const cfg = (section.settings ?? {}) as Record<string, string | number>;
   const slug = String(cfg.categorySlug || "art-education-news");
   const limit = Number(cfg.limit || 5);
@@ -387,7 +394,7 @@ async function NewsRenderer({
   slug,
 }: {
   postsPromise: Promise<PostWithRelations[]>;
-  section: HomepageSection;
+  section: SectionProps;
   slug: string;
 }) {
   const posts = await postsPromise;
@@ -480,7 +487,7 @@ async function NewsRenderer({
 }
 
 /* ═══════════════ Announcements — compact alert rows ═══════════════ */
-function AnnouncementsSection({ section }: { section: HomepageSection }) {
+function AnnouncementsSection({ section }: { section: SectionProps }) {
   const cfg = (section.settings ?? {}) as Record<string, string | number>;
   const slug = String(cfg.categorySlug || "announcements");
   const limit = Number(cfg.limit || 4);
@@ -493,7 +500,7 @@ async function AnnouncementsRenderer({
   slug,
 }: {
   postsPromise: Promise<PostWithRelations[]>;
-  section: HomepageSection;
+  section: SectionProps;
   slug: string;
 }) {
   const posts = await postsPromise;
@@ -577,7 +584,7 @@ function postHref(post: PostWithRelations) {
 }
 
 /* ═══════════════ Galleries ═══════════════ */
-function GalleriesSection({ section }: { section: HomepageSection }) {
+function GalleriesSection({ section }: { section: SectionProps }) {
   const cfg = (section.settings ?? {}) as Record<string, string | number>;
   const slug = String(cfg.categorySlug || "art-exhibitions");
   const limit = Number(cfg.limit || 6);
@@ -590,7 +597,7 @@ async function GalleriesRenderer({
   slug,
 }: {
   postsPromise: Promise<PostWithRelations[]>;
-  section: HomepageSection;
+  section: SectionProps;
   slug: string;
 }) {
   const posts = await postsPromise;
@@ -605,7 +612,7 @@ async function GalleriesRenderer({
 }
 
 /* ═══════════════ Student Work ═══════════════ */
-function StudentWorkSection({ section }: { section: HomepageSection }) {
+function StudentWorkSection({ section }: { section: SectionProps }) {
   const cfg = (section.settings ?? {}) as Record<string, string | number>;
   const slug = String(cfg.categorySlug || "student-creations");
   const limit = Number(cfg.limit || 6);
@@ -618,7 +625,7 @@ async function StudentWorkRenderer({
   slug,
 }: {
   postsPromise: Promise<PostWithRelations[]>;
-  section: HomepageSection;
+  section: SectionProps;
   slug: string;
 }) {
   const posts = await postsPromise;
@@ -635,7 +642,7 @@ async function StudentWorkRenderer({
 }
 
 /* ═══════════════ Achievements — medal cards ═══════════════ */
-function AchievementsSection({ section }: { section: HomepageSection }) {
+function AchievementsSection({ section }: { section: SectionProps }) {
   const cfg = (section.settings ?? {}) as Record<string, string | number>;
   const slug = String(cfg.categorySlug || "awards-achievements");
   const limit = Number(cfg.limit || 4);
@@ -650,7 +657,7 @@ async function AchievementsRenderer({
   slug,
 }: {
   postsPromise: Promise<PostWithRelations[]>;
-  section: HomepageSection;
+  section: SectionProps;
   slug: string;
 }) {
   const posts = await postsPromise;
@@ -689,7 +696,7 @@ async function AchievementsRenderer({
 }
 
 /* ═══════════════ CTA ═══════════════ */
-function CTASection({ section }: { section: HomepageSection }) {
+function CTASection({ section }: { section: SectionProps }) {
   const cfg = (section.settings ?? {}) as Record<string, string>;
   return (
     <section className="container-page py-12 lg:py-16">
@@ -720,7 +727,7 @@ export function HomepageSectionRenderer({
   section,
   settings,
 }: {
-  section: HomepageSection;
+  section: SectionProps;
   settings: { title: string; subtitle: string; description: string };
 }) {
   switch (section.type) {

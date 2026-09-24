@@ -1,9 +1,14 @@
 import { test, expect, Page } from "@playwright/test";
 import path from "path";
 import fs from "fs";
+import { deleteMediaById } from "./helpers";
 
 const ADMIN_EMAIL = "admin@binawf.local";
 const ADMIN_PASSWORD = "Binawf2026!";
+
+// Reuse authenticated session across tests to avoid the login rate limiter
+// (10 attempts / 15 min) — same pattern as cms-audit.spec.ts
+let savedCookies: { name: string; value: string; domain: string; path: string }[] | null = null;
 
 function attachErrorCollectors(page: Page, errors: { console: string[]; network: string[] }) {
   page.on("console", (msg) => {
@@ -31,12 +36,17 @@ function assertNoErrors(errors: { console: string[]; network: string[] }, name: 
 }
 
 async function adminLogin(page: Page) {
-  await page.goto("/admin/login");
-  await expect(page.locator("h1")).toContainText("تسجيل الدخول");
-  await page.fill("input#email", ADMIN_EMAIL);
-  await page.fill("input#password", ADMIN_PASSWORD);
-  await page.click("button[type='submit']");
-  await page.waitForURL("/admin");
+  if (savedCookies && savedCookies.length > 0) {
+    await page.context().addCookies(savedCookies);
+  }
+  await page.goto("/admin");
+  if (page.url().includes("/admin/login")) {
+    await page.fill("input#email", ADMIN_EMAIL);
+    await page.fill("input#password", ADMIN_PASSWORD);
+    await page.locator("form button[type='submit']:visible").click();
+    await page.waitForURL("/admin", { timeout: 15000 });
+    savedCookies = await page.context().cookies();
+  }
 }
 
 test.describe("Public site", () => {
@@ -246,14 +256,29 @@ test.describe("Admin dashboard", () => {
     await page.goto("/admin/media");
     await expect(page.locator("h1")).toContainText("مكتبة الوسائط");
 
-    const input = page.locator("input[type='file']");
-    await input.setInputFiles(tmpFile);
-    // New media library auto-uploads on file selection
-    await page.waitForTimeout(5000);
-    await expect(page.locator("body")).toContainText("test-image.png");
+    let uploadedMediaId = "";
+    try {
+      // Capture the upload response so cleanup targets exactly this row's id
+      const uploadDone = page.waitForResponse(
+        (r) => r.url().includes("/api/media") && r.request().method() === "POST" && r.ok()
+      );
+      const input = page.locator("input[type='file']");
+      await input.setInputFiles(tmpFile);
+      const uploadResp = await uploadDone;
+      uploadedMediaId = (await uploadResp.json())?.media?.id ?? "";
+      // Fail explicitly if the upload succeeded but returned no id —
+      // otherwise cleanup would skip silently and leave debris.
+      expect(uploadedMediaId, "upload response did not include media.id").toBeTruthy();
 
-    await takeScreenshot(page, "10-admin-media");
-    assertNoErrors(errors, "admin media upload");
+      await expect(page.locator("body")).toContainText("test-image.png");
+
+      await takeScreenshot(page, "10-admin-media");
+      assertNoErrors(errors, "admin media upload");
+    } finally {
+      // Delete only the row this test created — nothing if the upload failed
+      if (uploadedMediaId) await deleteMediaById(page, uploadedMediaId);
+      fs.rmSync(tmpFile, { force: true });
+    }
   });
 
   test("Update site settings and reflect on public site", async ({ page }) => {
