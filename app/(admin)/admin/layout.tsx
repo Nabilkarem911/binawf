@@ -20,6 +20,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <AdminSidebar
         userName={session.name}
         userRole={roleLabel[session.role] ?? "محرر"}
+        canManageUsers={session.role === "ADMIN"}
       />
       <main className="flex-1 overflow-x-hidden">
         <div className="container-page py-6 lg:py-8">{children}</div>

@@ -15,7 +15,15 @@ export async function getAdminSession(): Promise<AdminSession | null> {
     const session = await unsealData<AdminSession>(cookie, {
       password: sessionOptions.password,
     });
-    return session && session.isLoggedIn ? session : null;
+    if (!session || !session.isLoggedIn) return null;
+    // Kill sessions whose account was disabled or removed, and keep the role fresh
+    // (a demoted admin must not keep admin powers from a stale sealed cookie).
+    const user = await prisma.user.findUnique({
+      where: { id: session.userId },
+      select: { isActive: true, role: true },
+    });
+    if (!user || !user.isActive) return null;
+    return { ...session, role: user.role };
   } catch {
     return null;
   }

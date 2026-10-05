@@ -15,6 +15,7 @@ type NavItem = {
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   badge?: string;
+  adminOnly?: boolean;
 };
 
 type NavGroup = {
@@ -47,7 +48,7 @@ const navGroups: NavGroup[] = [
   {
     label: "الإدارة",
     items: [
-      { title: "المستخدمون", href: "/admin/users", icon: Users },
+      { title: "المستخدمون", href: "/admin/users", icon: Users, adminOnly: true },
       { title: "الإعدادات", href: "/admin/settings", icon: Settings },
     ],
   },
@@ -56,10 +57,12 @@ const navGroups: NavGroup[] = [
 function SidebarContent({
   userName,
   userRole,
+  canManageUsers,
   onNavigate,
 }: {
   userName: string;
   userRole: string;
+  canManageUsers: boolean;
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
@@ -90,7 +93,7 @@ function SidebarContent({
               {group.label}
             </p>
             <div className="space-y-0.5">
-              {group.items.map((item) => {
+              {group.items.filter((item) => !item.adminOnly || canManageUsers).map((item) => {
                 const active = isActive(item.href);
                 return (
                   <Link
@@ -127,6 +130,12 @@ function SidebarContent({
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-sidebar-foreground">{userName}</p>
             <p className="truncate text-[11px] text-sidebar-foreground/50">{userRole}</p>
+            <Link
+              href="/admin/profile"
+              className="text-[11px] font-medium text-gold transition-colors hover:text-gold/80 hover:underline"
+            >
+              بياناتي
+            </Link>
           </div>
         </div>
         <div className="mt-2 flex gap-1">
@@ -156,9 +165,11 @@ function SidebarContent({
 export function AdminSidebar({
   userName,
   userRole,
+  canManageUsers,
 }: {
   userName: string;
   userRole: string;
+  canManageUsers: boolean;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -167,7 +178,7 @@ export function AdminSidebar({
       {/* Desktop sidebar */}
       <aside className="hidden w-64 shrink-0 lg:block">
         <div className="sticky top-0 h-screen overflow-hidden bg-sidebar">
-          <SidebarContent userName={userName} userRole={userRole} />
+          <SidebarContent userName={userName} userRole={userRole} canManageUsers={canManageUsers} />
         </div>
       </aside>
 
@@ -198,7 +209,7 @@ export function AdminSidebar({
             >
               <X className="h-5 w-5" />
             </button>
-            <SidebarContent userName={userName} userRole={userRole} onNavigate={() => setOpen(false)} />
+            <SidebarContent userName={userName} userRole={userRole} canManageUsers={canManageUsers} onNavigate={() => setOpen(false)} />
           </div>
         </div>
       )}

@@ -1,6 +1,7 @@
-import { requireAuth } from "@/lib/auth";
+import Link from "next/link";
+import { requireAdmin } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
-import { Plus, Shield, Check, X } from "lucide-react";
+import { Plus, Shield, Check, X, Pencil } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,7 @@ const roleColor: Record<string, string> = {
 };
 
 export default async function UsersPage() {
-  const session = await requireAuth();
+  const session = await requireAdmin();
   const users = await prisma.user.findMany({
     orderBy: { createdAt: "desc" },
   });
@@ -29,15 +30,13 @@ export default async function UsersPage() {
           <h1 className="text-2xl font-black tracking-tight text-foreground">المستخدمون</h1>
           <p className="mt-1 text-sm text-muted-foreground">{users.length} مستخدم — إدارة الحسابات والصلاحيات</p>
         </div>
-        <button
-          type="button"
+        <Link
+          href="/admin/users/new"
           className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-bold text-primary-foreground transition-colors hover:bg-primary/90"
-          disabled
-          title="قريباً"
         >
           <Plus className="h-4 w-4" />
           مستخدم جديد
-        </button>
+        </Link>
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-border/60 bg-card shadow-card">
@@ -50,6 +49,7 @@ export default async function UsersPage() {
                 <th className="px-4 py-3 font-semibold text-muted-foreground">الدور</th>
                 <th className="hidden px-4 py-3 font-semibold text-muted-foreground sm:table-cell">الحالة</th>
                 <th className="hidden px-4 py-3 font-semibold text-muted-foreground md:table-cell">آخر دخول</th>
+                <th className="px-4 py-3 font-semibold text-muted-foreground">إجراءات</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -90,6 +90,15 @@ export default async function UsersPage() {
                     {user.lastLoginAt
                       ? new Intl.DateTimeFormat("ar-SA", { dateStyle: "short", timeStyle: "short" }).format(user.lastLoginAt)
                       : "—"}
+                  </td>
+                  <td className="px-4 py-3">
+                    <Link
+                      href={`/admin/users/${user.id}`}
+                      className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      تعديل
+                    </Link>
                   </td>
                 </tr>
               ))}
